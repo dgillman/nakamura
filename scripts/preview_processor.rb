@@ -30,13 +30,13 @@ module Net::HTTPHeader
   end
   def encode_kvpair(k, vs)
     if vs.nil? or vs == '' then
-      "#{urlencode(k)}="
+      "#{CGI::escape(k)}="
     elsif vs.kind_of?(Array)
       # In Ruby 1.8.7, Array(string-with-newlines) will split the string
       # after each embedded newline.
-      Array(vs).map {|v| "#{urlencode(k)}=#{urlencode(v.to_s)}" }
+      Array(vs).map {|v| "#{CGI::escape(k)}=#{CGI::escape(v.to_s)}" }
     else
-      "#{urlencode(k)}=#{urlencode(vs.to_s)}"
+      "#{CGI::escape(k)}=#{CGI::escape(vs.to_s)}"
     end
   end
 end
@@ -69,6 +69,11 @@ def process_as_image?(extension)
   ['.png', '.jpg', '.gif', '.psd', '.jpeg'].include? extension
 end
 
+# HTML pages only need the first "page"
+def only_first_page?(extension)
+  ['.htm', '.html', '.xhtml', '.txt'].include? extension
+end
+
 # Ignore the file types in the ignore.types file
 def ignore_processing?(mimetype)
   File.open("../ignore.types", "r") do |f|
@@ -88,16 +93,25 @@ end
 # this mimetype, return it, otherwise just grab the first extension from the
 # mimetype entry in mime.types and use it for the extension to create a preview
 def determine_file_extension_with_mime_type(mimetype, given_extension)
+  # return if either argument is nil
+  return '' if mimetype.nil?
+
   # strip off the leading . in the given extension
   if given_extension && given_extension.match(/^\./)
     given_extension = given_extension[1..-1]
   end
+
+  # look through the known mimetypes to see if we handle this mimetype
+  #   note: have to check 1 dir higher because of a Dir.chdir that happens
+  #   before this is called
   File.open("../mime.types", "r") do |f|
     while (line = f.gets)
       line.chomp!
       # ignore any commented lines and check for the mimetype in the line
       if line[0] != "#" && line.include?(mimetype) then
-        if ! given_extension.nil? and line.include? given_extension
+        # use to_s since that will always give us a sensible String and not nil
+        # nil.to_s == ''
+        if given_extension && !given_extension.empty? && line.include?(given_extension) then
           return ".#{given_extension}"
         else
           return ".#{line.split(' ')[1]}"
@@ -142,16 +156,18 @@ def extract_terms(content, max_terms = 5)
   # replace apostrophes
   content = content.gsub(/\u2018/, "'").gsub(/\u2019/, "'")
   # remove ellipses (…)
-  content = content.gsub(/\u2026/, "")
+  content = content.gsub(/\u2026/, '')
+  # replace non-breaking spaces with a space char
+  content = content.gsub(/\u00a0/, ' ')
 
   # extract the terms
-  pre_terms = TermExtract.extract(content.downcase, :min_occurance => 1)
+  pre_terms = TermExtract.extract(content, :min_occurance => 1)
 
   # process the terms to collect only the ones that meet our conditions
   terms = {}
   pre_terms.each do |term, occurences|
-    # replace non-breaking spaces
-    key = term.gsub(/\xC2\xA0/, ' ').strip
+    # clean the term of extra spaces and downcase it
+    key = term.strip.downcase
 
     # don't collect terms that have:
     #  * any characters that aren't alphabetic or a space
@@ -161,7 +177,7 @@ def extract_terms(content, max_terms = 5)
     non_alpha = key =~ /[^[[:alpha:]] ]/
     one_char = key.length == 1
     contains_http = key.include?('http')
-    more_than_two_words = key.split(/ /).length > 2
+    more_than_two_words = key.split(' ', 3).length > 2
 
     terms[key] = occurences unless non_alpha or one_char or contains_http or more_than_two_words
   end
@@ -225,7 +241,7 @@ def main()
   log "Starts a new batch of queued files: #{queued_files.join(', ')}"
 
   Dir['*'].each do |id|
-    FileUtils.rm id
+    FileUtils.rm_f id
     log "processing #{id}"
 
     begin
@@ -251,7 +267,7 @@ def main()
       else
         # Making a local copy of the file.
         content_file = @s.execute_get @s.url_for("p/#{id}")
-        unless content_file.code == '200'
+        unless ['200', '204'].include? content_file.code
           raise "Failed to process file: #{id}, status: #{content_file.code}"
         end
         File.open(filename, 'wb') { |f| f.write content_file.body }
@@ -266,7 +282,7 @@ def main()
           content = resize_and_write_file filename, filename_thumb, 180, 225
           post_file_to_server id, content, :small, page_count
 
-          FileUtils.rm DOCS_DIR + "/#{filename_thumb}"
+          FileUtils.rm_f DOCS_DIR + "/#{filename_thumb}"
         else
           begin
             # Check if user wants autotagging
@@ -289,7 +305,6 @@ def main()
               # Generate tags for document
               @s.execute_post @s.url_for("p/#{id}"), {':operation' => 'tag', 'key' => terms}
               log "Generate tags for #{id}, #{terms}"
-              FileUtils.rm id + ".txt"
               admin_id = "admin"
               origin_file_name = meta["sakai:pooled-content-file-name"]
               if not terms.nil? and terms.length > 0 and user["user"]["properties"]["sendTagMsg"] and user["user"]["properties"]["sendTagMsg"] != "false"
@@ -313,7 +328,11 @@ def main()
           end
 
           # Generating image previews of the document.
-          Docsplit.extract_images filename, :size => '1000x', :format => :jpg
+          if only_first_page? extension
+            Docsplit.extract_images filename, :size => '1000x', :format => :jpg, :pages => 1
+          else
+            Docsplit.extract_images filename, :size => '1000x', :format => :jpg
+          end
 
           # Skip documents with a page count of 0, just to be sure.
           next if Dir[id + '_*'].size == 0
@@ -386,7 +405,7 @@ opt = Getopt::Long.getopts(
   ["--count", "-n", Getopt::REQUIRED]
 )
 
-if opt['help'] || ( not(opt['server'] && opt['password'] ) )
+if opt['help'] || ( not(opt['server'] && opt['password']) )
   usage()
 else
   setup(opt['server'], opt['password'])

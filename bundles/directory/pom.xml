@@ -22,10 +22,9 @@
 	<parent>
 		<groupId>org.sakaiproject.nakamura</groupId>
 		<artifactId>base</artifactId>
-		<version>1.1.5-rsmart-SNAPSHOT</version>
+		<version>1.2.0-rsmart-SNAPSHOT</version>
 		<relativePath>../../pom.xml</relativePath>
 	</parent>
-	<groupId>org.sakaiproject.nakamura</groupId>
 	<artifactId>org.sakaiproject.nakamura.directory</artifactId>
 	<packaging>bundle</packaging>
 	<name>Sakai Nakamura :: Model Directory</name>

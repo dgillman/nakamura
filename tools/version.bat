@@ -1,1 +1,1 @@
-set K2VERSION=1.1.5-rsmart-SNAPSHOT
+set K2VERSION=1.2.0-rsmart-SNAPSHOT

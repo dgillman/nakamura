@@ -16,18 +16,17 @@
     <parent>
       <groupId>org.sakaiproject.nakamura</groupId>
       <artifactId>base</artifactId>
-      <version>1.1.5-rsmart-SNAPSHOT</version>
+      <version>1.2.0-rsmart-SNAPSHOT</version>
     </parent>
 
     <artifactId>org.sakaiproject.nakamura.app</artifactId>
-    <version>1.1.5-rsmart-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Sakai Nakamura :: Launchpad Standalone Java Application</name>
     <description> Standalone Launchpad Java Application. Everything needed to run the Launchpad is
     included in a single JAR file. </description>
     <properties>
-      <ux>1.1.5-rsmart-SNAPSHOT</ux>
+      <ux>1.1.4-rsmart</ux>
     </properties>
 
     <build>
@@ -48,7 +47,7 @@
                             <jarWebSupport>
                                  <groupId>org.sakaiproject.nakamura</groupId>
                                  <artifactId>org.sakaiproject.nakamura.jetty-config</artifactId>
-                                 <version>1.1.2-rsmart-SNAPSHOT</version>
+                                 <version>1.2.0-rsmart-SNAPSHOT</version>
                                  <startLevel>5</startLevel>
                            </jarWebSupport>
                            <additionalBundles>
@@ -111,13 +110,13 @@
                         </addDefaultImplementationEntries>
                      </manifest>
                      <manifestEntries>
-                         <Specification-Title>rSmart Academic</Specification-Title>
+                         <Specification-Title>Nakamura Server</Specification-Title>
                          <Specification-Version>${project.version}</Specification-Version>
-                         <Specification-Vendor>rSmart</Specification-Vendor>
-                         <Implementation-Title>rSmart Academic</Implementation-Title>
+                         <Specification-Vendor>The Sakai Foundation</Specification-Vendor>
+                         <Implementation-Title>Nakamura Server</Implementation-Title>
                          <Implementation-Version>${project.version}</Implementation-Version>
                          <Implementation-Vendor-Id>${project.groupId}</Implementation-Vendor-Id>
-                         <Implementation-Vendor>rSmart</Implementation-Vendor>
+                         <Implementation-Vendor>The Sakai Foundation</Implementation-Vendor>
                          <Main-Class>org.sakaiproject.nakamura.app.NakamuraMain</Main-Class>
                      </manifestEntries>
                    </archive>
