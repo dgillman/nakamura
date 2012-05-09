@@ -1,6 +1,20 @@
 rSmart Nakamura Changelog
 =========================
 
+base-1.1.4-rsmart
+-----------------
+* [maven-release-plugin] prepare release base-1.1.4-rsmart 780d475
+* NOJIRA prepare 1.1.4 release build 6c43b53
+* NOJIRA bind to solr 1.3.3-rsmart release 608f40e
+* KERN-2754 Property "lit_context_id" should take precedence over all other means of LTI context id resolution (cherry picked from commit b0
+* KERN-2671 remove cliffhanger in comment (cherry picked from commit d1ffded5fdf6b554ac134b9333827e90ae971cd1) 7293ff3
+* KERN-2480 Rather than just adding all the admin settings, running them through effectiveSettings so they don't override the user settings 
+* SAKIII-5297 LiteBasicLTIConsumerServlet results in a 500 error (cherry picked from commit ec1c3423827d3ff3aa817db60f7562e593c866f7) 00dcb0
+* NOJIRA switch to new nexus URL 2176e3f
+* NOJIRA fix maven warning messages 4b1c88d
+* release_post_process: Moving config files from 1.1.3-rsmart to 1.1.4-rsmart-SNAPSHOT e619f6e
+* [maven-release-plugin] prepare for next development iteration 63b7479
+
 base-1.1.3-rsmart
 -----------------
 * KERN-2683 corrected merge error df4deff
