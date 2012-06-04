@@ -5,7 +5,7 @@
   },
   "sling:resourceType": "sakai/solr-search",
   "sakai:propertyprovider" : "RelatedContentSearchPropertyProvider",
-  "sakai:batchresultprocessor": "RelatedContentSearchBatchResultProcessor",
+  "sakai:batchresultprocessor": "RelatedContentSearchBatchResultWriter",
   "sakai:title": "Pooled Content - Related Content",
   "sakai:shortDescription": "Lists content related to content in My Library."
 }

@@ -36,13 +36,9 @@ import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
@@ -53,37 +49,23 @@ import java.util.Iterator;
 @Component(immediate = true, metatype=true)
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "PooledContentFiles"),
-    @Property(name = SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP, boolValue = true)
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "PooledContentFiles"),
+    @Property(name = SolrSearchBatchResultWriter.DEFAULT_BATCH_WRITER_PROP, boolValue = true)
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
-public class PooledContentSearchBatchResultProcessor implements
-SolrSearchBatchResultProcessor {
+@Service(value = SolrSearchBatchResultWriter.class)
+public class PooledContentSearchBatchResultWriter
+   implements SolrSearchBatchResultWriter {
 
-  @Reference
-  protected SolrSearchServiceFactory searchServiceFactory;
   @Reference
   private Repository repository;
 
   public static final Logger LOGGER = LoggerFactory
-      .getLogger(LiteMeManagerFileSearchBatchResultProcessor.class);
-
-  /**
-   * The non component constructor
-   * @param searchServiceFactory
-   */
-  PooledContentSearchBatchResultProcessor(SolrSearchServiceFactory searchServiceFactory) {
-    if ( searchServiceFactory == null ) {
-      throw new IllegalArgumentException("Search Service Factory must be set when not using as a component");
-    }
-    this.searchServiceFactory = searchServiceFactory;
-  }
-
+      .getLogger(LiteMeManagerFileSearchBatchResultWriter.class);
 
   /**
    * Component Constructor.
    */
-  public PooledContentSearchBatchResultProcessor() {
+  public PooledContentSearchBatchResultWriter() {
   }
 
 
@@ -118,9 +100,5 @@ SolrSearchBatchResultProcessor {
       }
     }
   }
-
-
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query) throws SolrSearchException {
-    return searchServiceFactory.getSearchResultSet(request, query);  }
 
 }

@@ -33,9 +33,11 @@ import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,17 +61,17 @@ import java.util.Set;
 @Component(immediate = true, metatype = true)
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "RelatedContentSearchBatchResultProcessor") })
-@Service(value = SolrSearchBatchResultProcessor.class)
-public class RelatedContentSearchBatchResultProcessor extends
-    LiteFileSearchBatchResultProcessor {
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "RelatedContentSearchBatchResultWriter") })
+@Service(value = SolrSearchBatchResultWriter.class)
+public class RelatedContentSearchBatchResultWriter extends
+   LiteFileSearchBatchResultWriter {
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(RelatedContentSearchBatchResultProcessor.class);
+      .getLogger(RelatedContentSearchBatchResultWriter.class);
 
-  private static final String DEFAULT_SEARCH_PROC_TARGET = "(&("
-      + SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP + "=true))";
-  @Reference(target = DEFAULT_SEARCH_PROC_TARGET)
+  private static final String DEFAULT_SEARCH_WRITE_TARGET = "(&("
+      + SolrSearchResultWriter.DEFAULT_WRITER_PROP + "=true))";
+  @Reference(target = DEFAULT_SEARCH_WRITE_TARGET)
   private transient SolrSearchResultProcessor defaultSearchProcessor;
 
   /**
@@ -80,7 +82,7 @@ public class RelatedContentSearchBatchResultProcessor extends
   /**
    * {@inheritDoc}
    * 
-   * @see org.sakaiproject.nakamura.files.search.LiteFileSearchBatchResultProcessor#writeResults(org.apache.sling.api.SlingHttpServletRequest,
+   * @see LiteFileSearchBatchResultWriter#writeResults(org.apache.sling.api.SlingHttpServletRequest,
    *      org.apache.sling.commons.json.io.JSONWriter, java.util.Iterator)
    */
   @Override

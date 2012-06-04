@@ -21,16 +21,18 @@ import com.google.common.collect.Lists;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
+import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.commons.osgi.PropertiesUtil;
 import org.apache.solr.client.solrj.response.FacetField;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,9 +56,11 @@ import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARA
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "RandomContent")
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
-public class RandomContentSearchBatchResultProcessor extends LiteFileSearchBatchResultProcessor {
+@Service(value = SolrSearchBatchResultWriter.class)
+public class RandomContentSearchBatchResultProcessor extends LiteFileSearchBatchResultWriter {
 
+  @Reference
+  protected transient SolrSearchServiceFactory searchServiceFactory;
 
   /*
    * Increase the numbers of items the solr query returns by this amount.

@@ -35,7 +35,7 @@ import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -50,24 +50,24 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-@Component(immediate = true, label = "MostActiveContentSearchBatchResultProcessor", description = "Formatter for most active content")
-@Service(value = SolrSearchBatchResultProcessor.class)
+@Component(immediate = true, label = "LiteMostActiveContentSearchBatchResultWriter", description = "Formatter for most active content")
+@Service(value = SolrSearchBatchResultWriter.class)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.batchprocessor", value = "LiteMostActiveContent") })
-public class LiteMostActiveContentSearchBatchResultProcessor implements
-    SolrSearchBatchResultProcessor {
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "LiteMostActiveContent") })
+public class LiteMostActiveContentSearchBatchResultWriter implements
+   SolrSearchBatchResultWriter {
 
   public static final String STARTPAGE_PARAM = "startpage";
   public static final String NUMITEMS_PARAM = "numitems";
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(LiteMostActiveContentSearchBatchResultProcessor.class);
+      .getLogger(LiteMostActiveContentSearchBatchResultWriter.class);
 
   @Reference
   private SolrSearchServiceFactory searchServiceFactory;
 
   /**
-   * 
+   *
    * {@inheritDoc}
    * 
    * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#writeResults(org.apache.sling.api.SlingHttpServletRequest,
@@ -231,21 +231,9 @@ public class LiteMostActiveContentSearchBatchResultProcessor implements
       }
     }
 
-    private LiteMostActiveContentSearchBatchResultProcessor getOuterType() {
-      return LiteMostActiveContentSearchBatchResultProcessor.this;
+    private LiteMostActiveContentSearchBatchResultWriter getOuterType() {
+      return LiteMostActiveContentSearchBatchResultWriter.this;
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   * 
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      org.sakaiproject.nakamura.api.search.solr.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-
-    return searchServiceFactory.getSearchResultSet(request, query);
   }
 
 }

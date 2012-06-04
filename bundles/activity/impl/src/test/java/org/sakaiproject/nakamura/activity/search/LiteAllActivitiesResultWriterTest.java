@@ -64,10 +64,9 @@ import java.util.Map;
  * Time: 3:30 PM
  * To change this template use File | Settings | File Templates.
  */
-public class LiteAllActivitiesResultProcessorTest {
+public class LiteAllActivitiesResultWriterTest {
 
-  private LiteAllActivitiesResultProcessor processor;
-  private SolrSearchServiceFactory solrSearchServiceFactory;
+  private LiteAllActivitiesResultWriter processor;
   private Repository repository;
   private javax.jcr.Session jcrSession;
   private Session session;
@@ -81,9 +80,7 @@ public class LiteAllActivitiesResultProcessorTest {
 
   @Before
   public void setup() throws Exception {
-    processor = new LiteAllActivitiesResultProcessor();
-    solrSearchServiceFactory = mock(SolrSearchServiceFactory.class);
-    processor.searchServiceFactory = solrSearchServiceFactory;
+    processor = new LiteAllActivitiesResultWriter();
     BasicUserInfoService basicUserInfoService = mock(BasicUserInfoService.class);
     when(basicUserInfoService.getProperties(Matchers.<Authorizable>anyObject())).thenReturn(ImmutableMap.of("firstName", (Object)"Alice", "lastName", "Walter", "email", "alice@example.com"));
     processor.basicUserInfoService = basicUserInfoService;
@@ -232,13 +229,6 @@ public class LiteAllActivitiesResultProcessorTest {
     when(session.getContentManager()).thenThrow(new StorageClientException("Something wrong with storage. Shrug."));
     when(((SessionAdaptable) jcrSession).getSession()).thenReturn(session);
     processor.writeResult(request, jsonWriter, result);
-  }
-
-  @Test
-  public void callSearchServiceFactory() throws Exception {
-    Query query = mock(Query.class);
-    processor.getSearchResultSet(request, query);
-    verify(solrSearchServiceFactory).getSearchResultSet(request, query);
   }
 
   @After

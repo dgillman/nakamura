@@ -110,7 +110,7 @@ public class MostActiveContentSearchBatchResultProcessorTest {
 
     loadSession(activityNodes, resourceNodes);
 
-    LiteMostActiveContentSearchBatchResultProcessor m = new LiteMostActiveContentSearchBatchResultProcessor();
+    LiteMostActiveContentSearchBatchResultWriter m = new LiteMostActiveContentSearchBatchResultWriter();
     m.writeResults(request, jsonWriter, rowIterator);
 
     assertEquals(
@@ -137,7 +137,7 @@ public class MostActiveContentSearchBatchResultProcessorTest {
     when(rowIterator.hasNext()).thenReturn(true, true, false);
     when(rowIterator.nextRow()).thenReturn(goodRow, badRow);
 
-    LiteMostActiveContentSearchBatchResultProcessor m = new LiteMostActiveContentSearchBatchResultProcessor();
+    LiteMostActiveContentSearchBatchResultWriter m = new LiteMostActiveContentSearchBatchResultWriter();
     m.writeResults(request, jsonWriter, rowIterator);
 
     assertEquals(
@@ -164,7 +164,7 @@ public class MostActiveContentSearchBatchResultProcessorTest {
 
     loadSession(activityNodes, resourceNodes);
 
-    LiteMostActiveContentSearchBatchResultProcessor m = new LiteMostActiveContentSearchBatchResultProcessor();
+    LiteMostActiveContentSearchBatchResultWriter m = new LiteMostActiveContentSearchBatchResultWriter();
     m.writeResults(request, jsonWriter, rowIterator);
 
     assertEquals(

@@ -20,7 +20,6 @@ package org.sakaiproject.nakamura.search.solr;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.commons.json.JSONException;
@@ -32,12 +31,9 @@ import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
@@ -54,28 +50,12 @@ import java.util.Collection;
 
 @Component(immediate = true, metatype = true)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.processor", value = "AllFiles") })
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "AllFiles") })
 @Service
-public class AllFilesSearchResultProcessor implements SolrSearchResultProcessor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(AllFilesSearchResultProcessor.class);
+public class AllFilesSearchResultWriter implements SolrSearchResultWriter {
+  private static final Logger LOGGER = LoggerFactory.getLogger(AllFilesSearchResultWriter.class);
 
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
-
-  AllFilesSearchResultProcessor(SolrSearchServiceFactory searchServiceFactory) {
-    if (searchServiceFactory == null) {
-      throw new IllegalArgumentException(
-          "Search Service Factory must be set when not using as a component");
-    }
-    this.searchServiceFactory = searchServiceFactory;
-  }
-
-  public AllFilesSearchResultProcessor() {
-  }
-
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    return searchServiceFactory.getSearchResultSet(request, query);
+  public AllFilesSearchResultWriter() {
   }
 
   public void writeResult(SlingHttpServletRequest request, JSONWriter write, Result result)

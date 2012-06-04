@@ -42,13 +42,9 @@ import org.sakaiproject.nakamura.api.lite.content.ContentManager;
 import org.sakaiproject.nakamura.api.message.LiteMessageProfileWriter;
 import org.sakaiproject.nakamura.api.message.LiteMessagingService;
 import org.sakaiproject.nakamura.api.message.MessageConstants;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.sakaiproject.nakamura.util.StringUtils;
 
@@ -65,9 +61,9 @@ import javax.jcr.RepositoryException;
 @Properties(value = {
     @Property(name = Constants.SERVICE_VENDOR, value = "The Sakai Foundation"),
     @Property(name = Constants.SERVICE_DESCRIPTION, value = "Processor for message search results."),
-    @Property(name = SearchConstants.REG_PROCESSOR_NAMES, value = "Message")
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "Message")
 })
-public class MessageSearchResultProcessor implements SolrSearchResultProcessor {
+public class MessageSearchResultWriter implements SolrSearchResultWriter {
 
   enum ProfileType {
     TO, FROM
@@ -75,9 +71,6 @@ public class MessageSearchResultProcessor implements SolrSearchResultProcessor {
 
   @Reference
   protected LiteMessagingService messagingService;
-
-  @Reference
-  protected SolrSearchServiceFactory searchServiceFactory;
 
   @Reference(referenceInterface = LiteMessageProfileWriter.class, cardinality = ReferenceCardinality.MANDATORY_MULTIPLE, policy = ReferencePolicy.DYNAMIC)
   protected Map<String, LiteMessageProfileWriter> writers = new ConcurrentHashMap<String, LiteMessageProfileWriter>();
@@ -234,17 +227,6 @@ public class MessageSearchResultProcessor implements SolrSearchResultProcessor {
       path = messageStore + MessageConstants.BOX_INBOX + "/" + id;
     }
     return contentManager.get(path);
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      java.lang.String)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    return searchServiceFactory.getSearchResultSet(request, query);
   }
 
 }

@@ -35,13 +35,9 @@ import org.sakaiproject.nakamura.api.lite.StorageClientException;
 import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.content.Content;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,45 +48,27 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 /**
- * adapted from LiteFileSearchBatchResultProcessor
+ * adapted from LiteFileSearchBatchResultWriter
  * BatchProcessor to filter out duplicate Content items when feeding the My recent content widget
  * see KERN-1708.
  */
 @Component(immediate = true, metatype = true)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "LiteMeManagerFiles") })
-@Service(value = SolrSearchBatchResultProcessor.class)
-public class LiteMeManagerFileSearchBatchResultProcessor implements SolrSearchBatchResultProcessor {
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "LiteMeManagerFiles") })
+@Service(value = SolrSearchBatchResultWriter.class)
+public class LiteMeManagerFileSearchBatchResultWriter implements SolrSearchBatchResultWriter {
 
   public static final Logger LOGGER = LoggerFactory
-      .getLogger(LiteMeManagerFileSearchBatchResultProcessor.class);
+      .getLogger(LiteMeManagerFileSearchBatchResultWriter.class);
 
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
   @Reference
   private Repository repository;
 
-  public LiteMeManagerFileSearchBatchResultProcessor(SolrSearchServiceFactory searchServiceFactory) {
-    this.searchServiceFactory = searchServiceFactory;
-  }
-
-  public LiteMeManagerFileSearchBatchResultProcessor() {
+  public LiteMeManagerFileSearchBatchResultWriter() {
   }
 
   /**
-   * {@inheritDoc}
-   * 
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      org.sakaiproject.nakamura.api.search.solr.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-
-    return searchServiceFactory.getSearchResultSet(request, query);
-  }
-
-  /**
-   * adapted from LiteFileSearchBatchResultProcessor,
+   * adapted from LiteFileSearchBatchResultWriter,
    * adds filtering to return only unique results
    * {@inheritDoc}
    * 

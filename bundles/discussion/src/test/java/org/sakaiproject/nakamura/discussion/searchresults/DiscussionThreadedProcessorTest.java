@@ -61,7 +61,7 @@ import java.util.List;
 @RunWith(MockitoJUnitRunner.class)
 public class DiscussionThreadedProcessorTest {
 
-  private DiscussionThreadedSearchBatchResultProcessor processor;
+  private DiscussionThreadedSearchBatchResultWriter processor;
   private PresenceService presenceService;
 
   /**
@@ -71,8 +71,7 @@ public class DiscussionThreadedProcessorTest {
    */
   @Before
   public void setUp() throws Exception {
-    processor = new DiscussionThreadedSearchBatchResultProcessor();
-    processor.searchServiceFactory = mock(SolrSearchServiceFactory.class);
+    processor = new DiscussionThreadedSearchBatchResultWriter();
     presenceService = mock(PresenceService.class);
     processor.presenceService = presenceService;
     processor.basicUserInfoService = new BasicUserInfoServiceImpl() {

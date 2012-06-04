@@ -23,31 +23,14 @@ import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.io.JSONWriter;
-import org.sakaiproject.nakamura.api.lite.Session;
-import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
-import org.sakaiproject.nakamura.api.lite.content.Content;
-import org.sakaiproject.nakamura.api.lite.content.ContentManager;
 import org.sakaiproject.nakamura.api.search.solr.Query;
-import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
-import org.sakaiproject.nakamura.api.solr.SafeSolrMap;
-import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
-import java.util.Map;
-
-import javax.jcr.Node;
-import javax.jcr.RepositoryException;
 
 /**
  * Formats user profile node search results
@@ -79,51 +62,5 @@ public class DefaultResourceSearchResultProcessor implements SolrSearchResultPro
   public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
       Query query) throws SolrSearchException {
     return searchServiceFactory.getSearchResultSet(request, query);
-  }
-
-  public void writeResult(SlingHttpServletRequest request, JSONWriter write, Result result)
-      throws JSONException {
-    ResourceResolver resolver = request.getResourceResolver();
-    write.object();
-    write.key("searchdoc");
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    Map<String, Collection<Object>> resultProps = new SafeSolrMap(result.getProperties());
-    ExtendedJSONWriter.writeValueMap(write, resultProps);
-    String path = result.getPath();
-    Resource resource = resolver.getResource(path);
-    if (resource != null) {
-      Content content = resource.adaptTo(Content.class);
-      Node node = resource.adaptTo(Node.class);
-      if (content != null) {
-        write.key("content");
-        write.object();
-        ExtendedJSONWriter.writeNodeContentsToWriter(write, content);
-        write.endObject();
-      } else if (node != null) {
-        try {
-          write.key("node");
-          write.object();
-          ExtendedJSONWriter.writeNodeContentsToWriter(write, node);
-          write.endObject();
-        } catch (RepositoryException e) {
-          LOGGER.warn(e.getMessage(), e);
-        }
-      }
-    } else {
-      try {
-        Session session = StorageClientUtils.adaptToSession(resolver.adaptTo(javax.jcr.Session.class));
-        ContentManager contentManager= session.getContentManager();
-        Content content = contentManager.get(path);
-        if (content != null) {
-          write.key("content");
-          write.object();
-          ExtendedJSONWriter.writeNodeContentsToWriter(write, content);
-          write.endObject();
-        }
-      } catch ( Exception e ) {
-        LOGGER.warn(e.getMessage(), e);
-      }
-    }
-    write.endObject();
   }
 }

@@ -26,10 +26,9 @@ import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.io.JSONWriter;
 import org.osgi.framework.Constants;
 import org.sakaiproject.nakamura.api.presence.PresenceService;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,21 +44,21 @@ import java.util.Iterator;
  * TODO: Sort the above out and move this code to the correct bundle.
  */
 @Component(inherit = true)
-@Service(SolrSearchBatchResultProcessor.class)
+@Service(SolrSearchBatchResultWriter.class)
 @Properties({
   @Property(name = Constants.SERVICE_VENDOR, value = "The Sakai Foundation"),
-  @Property(name = SearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "ProfileContacts")
+  @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "ProfileContacts")
 })
-public class ProfileContactsSearchResultProcessor extends ProfileNodeSearchResultProcessor implements SolrSearchBatchResultProcessor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ProfileContactsSearchResultProcessor.class);
+public class ProfileContactsSearchResultWriter extends ProfileNodeSearchResultWriter
+   implements SolrSearchBatchResultWriter {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ProfileContactsSearchResultWriter.class);
 
-  public ProfileContactsSearchResultProcessor() {
+  public ProfileContactsSearchResultWriter() {
     super();
   }
 
-  ProfileContactsSearchResultProcessor(SolrSearchServiceFactory searchServiceFactory,
-      BasicUserInfoService basicUserInfoService, PresenceService presenceService) {
-    super(searchServiceFactory, basicUserInfoService, presenceService);
+  ProfileContactsSearchResultWriter(BasicUserInfoService basicUserInfoService, PresenceService presenceService) {
+    super(basicUserInfoService, presenceService);
   }
 
   public void writeResults(SlingHttpServletRequest request, JSONWriter write,

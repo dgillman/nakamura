@@ -43,12 +43,11 @@ import org.sakaiproject.nakamura.api.lite.authorizable.Group;
 import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
@@ -88,10 +87,10 @@ import java.util.Set;
 @Component(immediate = true, metatype = true)
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "RelatedContactsSearchBatchResultProcessor") })
-@Service(value = SolrSearchBatchResultProcessor.class)
-public class RelatedContactsSearchBatchResultProcessor implements
-    SolrSearchBatchResultProcessor {
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "RelatedContactsSearchBatchResultWriter") })
+@Service(value = SolrSearchBatchResultWriter.class)
+public class RelatedContactsSearchBatchResultWriter implements
+    SolrSearchBatchResultWriter {
 
   /**
    * "These go to eleven"
@@ -101,10 +100,7 @@ public class RelatedContactsSearchBatchResultProcessor implements
   protected static final String AUTHORIZABLE_RT = "authorizable";
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(RelatedContactsSearchBatchResultProcessor.class);
-
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
+      .getLogger(RelatedContactsSearchBatchResultWriter.class);
 
   @Reference
   private ConnectionManager connectionManager;
@@ -292,7 +288,7 @@ public class RelatedContactsSearchBatchResultProcessor implements
   }
 
   /**
-   * @param request
+   * @param session
    * @param writer
    * @param result
    * @param connectedUsers
@@ -314,7 +310,7 @@ public class RelatedContactsSearchBatchResultProcessor implements
   }
 
   /**
-   * @param request
+   * @param session
    * @param writer
    * @param result
    * @param connectedUsers
@@ -333,10 +329,10 @@ public class RelatedContactsSearchBatchResultProcessor implements
 
   /**
    * Inspired by
-   * {@link ConnectionFinderSearchResultProcessor#writeResult(SlingHttpServletRequest, JSONWriter, Result)}
+   * {@link ConnectionFinderSearchResultWriter#writeResult(SlingHttpServletRequest, JSONWriter, Result)}
    * 
    * @param user
-   * @param request
+   * @param session
    * @param writer
    * @param connectedUsers
    * @param processedUsers
@@ -368,18 +364,6 @@ public class RelatedContactsSearchBatchResultProcessor implements
       }
     }
 
-  }
-
-  /**
-   * {@inheritDoc}
-   * 
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      org.sakaiproject.nakamura.api.search.solr.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-
-    return searchServiceFactory.getSearchResultSet(request, query);
   }
 
 }

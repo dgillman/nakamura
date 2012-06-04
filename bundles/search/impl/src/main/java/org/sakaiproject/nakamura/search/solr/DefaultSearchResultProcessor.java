@@ -23,20 +23,12 @@ import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.io.JSONWriter;
-import org.sakaiproject.nakamura.api.lite.Session;
-import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
-import org.sakaiproject.nakamura.api.lite.content.Content;
-import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.Query;
-import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
-import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,23 +66,5 @@ public class DefaultSearchResultProcessor implements SolrSearchResultProcessor {
   public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
       Query query) throws SolrSearchException {
     return searchServiceFactory.getSearchResultSet(request, query);
-  }
-
-  public void writeResult(SlingHttpServletRequest request, JSONWriter write, Result result)
-      throws JSONException {
-    String contentPath = result.getPath();
-    Session session =
-      StorageClientUtils.adaptToSession(request.getResourceResolver().adaptTo(javax.jcr.Session.class));
-    try {
-      Content contentResult = session.getContentManager().get(contentPath);
-      if (contentResult != null) {
-        int traversalDepth = SearchUtil.getTraversalDepth(request, -1);
-        ExtendedJSONWriter.writeContentTreeToWriter(write, contentResult, traversalDepth);
-      } else {
-        LOGGER.warn("Failed to write result to JSON output: {}", contentPath);
-      }
-    } catch (Exception e) {
-      throw new JSONException(e);
-    }
   }
 }

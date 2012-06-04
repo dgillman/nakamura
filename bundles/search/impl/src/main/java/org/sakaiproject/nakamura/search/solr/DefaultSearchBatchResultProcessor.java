@@ -17,28 +17,18 @@
  */
 package org.sakaiproject.nakamura.search.solr;
 
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.DEFAULT_PAGED_ITEMS;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_ITEMS_PER_PAGE;
-
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.io.JSONWriter;
 import org.sakaiproject.nakamura.api.search.solr.Query;
-import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
-import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
-
-import java.util.Iterator;
 
 @Component(immediate = true, metatype=true)
 @Properties(value = {
@@ -70,24 +60,6 @@ public class DefaultSearchBatchResultProcessor implements
    */
   public DefaultSearchBatchResultProcessor() {
   }
-
-
-
-  public void writeResults(SlingHttpServletRequest request, JSONWriter write,
-      Iterator<Result> iterator) throws JSONException {
-
-
-    long nitems = SolrSearchUtil.longRequestParameter(request,
-        PARAMS_ITEMS_PER_PAGE, DEFAULT_PAGED_ITEMS);
-
-
-
-    for (long i = 0; i < nitems && iterator.hasNext(); i++) {
-      Result result = iterator.next();
-      ExtendedJSONWriter.writeValueMap(write,result.getProperties());
-    }
-  }
-
 
   public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query) throws SolrSearchException {
     return searchServiceFactory.getSearchResultSet(request, query);  }

@@ -35,13 +35,9 @@ import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.sakaiproject.nakamura.util.PathUtils;
@@ -51,17 +47,14 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 @Component(immediate = true, metatype = true)
-@Service(value = SolrSearchResultProcessor.class)
+@Service(value = SolrSearchResultWriter.class)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name =  SolrSearchConstants.REG_PROCESSOR_NAMES, value = "AllActivities") })
-public class LiteAllActivitiesResultProcessor implements SolrSearchResultProcessor {
+    @Property(name =  SolrSearchConstants.REG_WRITER_NAMES, value = "AllActivities") })
+public class LiteAllActivitiesResultWriter implements SolrSearchResultWriter {
 
 
   private static final Logger LOGGER = LoggerFactory
-      .getLogger(LiteAllActivitiesResultProcessor.class);
-
-  @Reference
-  protected SolrSearchServiceFactory searchServiceFactory;
+      .getLogger(LiteAllActivitiesResultWriter.class);
 
   @Reference
   protected BasicUserInfoService basicUserInfoService;
@@ -150,18 +143,6 @@ public class LiteAllActivitiesResultProcessor implements SolrSearchResultProcess
     } catch (StorageClientException e) {
       LOGGER.warn(e.getMessage(), e);
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   * 
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      org.sakaiproject.nakamura.api.search.solr.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-
-    return searchServiceFactory.getSearchResultSet(request, query);
   }
 
 }

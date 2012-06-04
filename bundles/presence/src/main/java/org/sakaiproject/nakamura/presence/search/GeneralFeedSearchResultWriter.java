@@ -38,13 +38,9 @@ import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.presence.PresenceService;
 import org.sakaiproject.nakamura.api.presence.PresenceUtils;
 import org.sakaiproject.nakamura.api.profile.ProfileService;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,13 +57,11 @@ import javax.jcr.RepositoryException;
 @Service
 @Properties({
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "GeneralFeed")
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "GeneralFeed")
 })
-public class GeneralFeedSearchResultProcessor implements SolrSearchBatchResultProcessor {
+public class GeneralFeedSearchResultWriter implements SolrSearchBatchResultWriter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(GeneralFeedSearchResultProcessor.class);
-    @Reference
-    private SolrSearchServiceFactory searchServiceFactory;
+    private static final Logger LOGGER = LoggerFactory.getLogger(GeneralFeedSearchResultWriter.class);
     @Reference
     private ProfileService profileService;
     @Reference
@@ -75,27 +69,16 @@ public class GeneralFeedSearchResultProcessor implements SolrSearchBatchResultPr
     @Reference
     private ConnectionManager connMgr;
 
-    public GeneralFeedSearchResultProcessor() {
+    public GeneralFeedSearchResultWriter() {
     }
 
-    public GeneralFeedSearchResultProcessor(SolrSearchServiceFactory searchServiceFactory) {
-        if (searchServiceFactory == null) {
-            throw new IllegalArgumentException("Search Service Factory must be set when not using as a component");
+    public GeneralFeedSearchResultWriter(ProfileService profileService,
+                                         PresenceService presenceService) {
+        if (profileService == null || presenceService == null) {
+            throw new IllegalArgumentException("ProfileService and PresenceService must be set when not using as a component");
         }
-        this.searchServiceFactory = searchServiceFactory;
-    }
-
-    public GeneralFeedSearchResultProcessor(SolrSearchServiceFactory searchServiceFactory, ProfileService profileService, PresenceService presenceService) {
-        if (searchServiceFactory == null || profileService == null || presenceService == null) {
-            throw new IllegalArgumentException("SearchServiceFactory, ProfileService and PresenceService must be set when not using as a component");
-        }
-        this.searchServiceFactory = searchServiceFactory;
         this.presenceService = presenceService;
         this.profileService = profileService;
-    }
-
-    public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query) throws SolrSearchException {
-        return searchServiceFactory.getSearchResultSet(request, query);
     }
 
     public void writeResults(SlingHttpServletRequest request, JSONWriter write,

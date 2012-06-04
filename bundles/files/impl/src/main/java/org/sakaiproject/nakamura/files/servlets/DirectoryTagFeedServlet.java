@@ -37,7 +37,6 @@ import org.sakaiproject.nakamura.api.doc.ServiceBinding;
 import org.sakaiproject.nakamura.api.doc.ServiceDocumentation;
 import org.sakaiproject.nakamura.api.doc.ServiceExtension;
 import org.sakaiproject.nakamura.api.doc.ServiceMethod;
-import org.sakaiproject.nakamura.api.doc.ServiceParameter;
 import org.sakaiproject.nakamura.api.doc.ServiceResponse;
 import org.sakaiproject.nakamura.api.doc.ServiceSelector;
 import org.sakaiproject.nakamura.api.files.FilesConstants;
@@ -49,10 +48,12 @@ import org.sakaiproject.nakamura.api.search.SearchServiceFactory;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.files.search.LiteFileSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.files.search.LiteFileSearchBatchResultWriter;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.sakaiproject.nakamura.util.PathUtils;
 
@@ -207,11 +208,11 @@ public class DirectoryTagFeedServlet extends SlingSafeMethodsServlet {
     String sortRandom = "random_" + String.valueOf(random) + " asc";
     final String queryString = sb.toString();
     Query solrQuery = new Query(queryString, ImmutableMap.of("sort", (Object) sortRandom));
-    final SolrSearchBatchResultProcessor rp = new LiteFileSearchBatchResultProcessor(
-        solrSearchServiceFactory, profileService);
+    final SolrSearchBatchResultWriter rw = new LiteFileSearchBatchResultWriter(profileService);
+    final SolrSearchBatchResultProcessor rp = new LiteFileSearchBatchResultProcessor(solrSearchServiceFactory);
     final SolrSearchResultSet srs = rp.getSearchResultSet(request, solrQuery);
     if (srs.getResultSetIterator().hasNext()) {
-      rp.writeResults(request, write, selectOneResult(srs.getResultSetIterator()));
+      rw.writeResults(request, write, selectOneResult(srs.getResultSetIterator()));
     } else {
       // write an empty result
       write.object().endObject();

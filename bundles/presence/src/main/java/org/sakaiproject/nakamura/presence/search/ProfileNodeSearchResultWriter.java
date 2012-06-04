@@ -35,13 +35,9 @@ import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.presence.PresenceService;
 import org.sakaiproject.nakamura.api.presence.PresenceUtils;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
@@ -61,13 +57,10 @@ import java.util.Map;
 @Service
 @Properties({
   @Property(name = Constants.SERVICE_VENDOR, value = "The Sakai Foundation"),
-  @Property(name = SearchConstants.REG_PROCESSOR_NAMES, value = "Profile")
+  @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "Profile")
 })
-public class ProfileNodeSearchResultProcessor implements SolrSearchResultProcessor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(ProfileNodeSearchResultProcessor.class);
-
-  @Reference
-  protected SolrSearchServiceFactory searchServiceFactory;
+public class ProfileNodeSearchResultWriter implements SolrSearchResultWriter {
+  private static final Logger LOGGER = LoggerFactory.getLogger(ProfileNodeSearchResultWriter.class);
 
   @Reference
   private BasicUserInfoService basicUserInfoService;
@@ -78,30 +71,16 @@ public class ProfileNodeSearchResultProcessor implements SolrSearchResultProcess
   @Reference
   private ConnectionManager connMgr;
 
-  public ProfileNodeSearchResultProcessor() {
+  public ProfileNodeSearchResultWriter() {
   }
 
-  ProfileNodeSearchResultProcessor(SolrSearchServiceFactory searchServiceFactory,
-      BasicUserInfoService basicUserInfoService, PresenceService presenceService) {
-    if (searchServiceFactory == null || basicUserInfoService == null || presenceService == null) {
+  ProfileNodeSearchResultWriter(BasicUserInfoService basicUserInfoService, PresenceService presenceService) {
+    if (basicUserInfoService == null || presenceService == null) {
       throw new IllegalArgumentException(
           "SearchServiceFactory, BasicUserInfoService and PresenceService must be set when not using as a component");
     }
-    this.searchServiceFactory = searchServiceFactory;
     this.presenceService = presenceService;
     this.basicUserInfoService = basicUserInfoService;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.SearchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      javax.jcr.query.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    // return the result set
-    return searchServiceFactory.getSearchResultSet(request, query);
   }
 
   /**

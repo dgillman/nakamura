@@ -2,7 +2,7 @@
   "sakai:query-template": '(path:(${_connectionstore}) AND resourceType:sakai/contact AND state:(ACCEPTED -NONE)) OR (type:u AND resourceType:authorizable AND tag:(${tags}))',
   "sling:resourceType": "sakai/solr-search",
   "sakai:propertyprovider" : "RelatedContactsSearchPropertyProvider",
-  "sakai:batchresultprocessor": "RelatedContactsSearchBatchResultProcessor",
+  "sakai:batchresultprocessor": "RelatedContactsSearchBatchResultWriter",
   "sakai:title": "Contacts - Search by Userid",
   "sakai:shortDescription": "Find all the ACCEPTED contacts for the specified userid.",
   "sakai:parameters" : [

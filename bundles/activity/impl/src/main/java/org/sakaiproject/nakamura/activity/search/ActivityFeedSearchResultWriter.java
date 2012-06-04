@@ -33,13 +33,9 @@ import org.sakaiproject.nakamura.api.lite.Session;
 import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.content.Content;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
@@ -52,32 +48,16 @@ import org.slf4j.LoggerFactory;
 @Service
 @Properties({
   @Property(name = "service.vendor", value = "The Sakai Foundation"),
-  @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "ActivityFeed")
+  @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "ActivityFeed")
 })
-public class ActivityFeedSearchResultProcessor implements SolrSearchResultProcessor {
+public class ActivityFeedSearchResultWriter implements SolrSearchResultWriter {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ActivityFeedSearchResultProcessor.class);
-
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
+  private static final Logger LOGGER = LoggerFactory.getLogger(ActivityFeedSearchResultWriter.class);
 
   @Reference
   private BasicUserInfoService basicUserInfoService;
 
-  public ActivityFeedSearchResultProcessor() {
-  }
-
-  ActivityFeedSearchResultProcessor(SolrSearchServiceFactory searchServiceFactory) {
-    if (searchServiceFactory == null) {
-      throw new IllegalArgumentException(
-          "Search Service Factory must be set when not using as a component");
-    }
-    this.searchServiceFactory = searchServiceFactory;
-  }
-
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    return searchServiceFactory.getSearchResultSet(request, query);
+  public ActivityFeedSearchResultWriter() {
   }
 
   public void writeResult(SlingHttpServletRequest request, JSONWriter write, Result result)

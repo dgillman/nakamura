@@ -56,10 +56,7 @@ import java.util.HashMap;
  *
  */
 @RunWith(MockitoJUnitRunner.class)
-public class ConnectionFinderSearchResultProcessorTest {
-
-  @Mock
-  SolrSearchServiceFactory searchServiceFactory;
+public class ConnectionFinderSearchResultWriterTest {
 
   @Mock
   Session session;
@@ -70,8 +67,7 @@ public class ConnectionFinderSearchResultProcessorTest {
 
   @Test
   public void test() throws Exception {
-    ConnectionFinderSearchResultProcessor processor = new ConnectionFinderSearchResultProcessor();
-    processor.searchServiceFactory = searchServiceFactory;
+    ConnectionFinderSearchResultWriter processor = new ConnectionFinderSearchResultWriter();
     processor.basicUserInfoService = new BasicUserInfoServiceImpl() {
         public BasicUserInfoServiceImpl setup() {
           countProvider = Mockito.mock(CountProvider.class);

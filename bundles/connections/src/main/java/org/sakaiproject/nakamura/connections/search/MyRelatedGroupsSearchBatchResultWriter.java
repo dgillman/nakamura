@@ -38,14 +38,11 @@ import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.authorizable.Group;
 import org.sakaiproject.nakamura.api.profile.ProfileService;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
@@ -77,10 +74,10 @@ import javax.jcr.RepositoryException;
 @Component(immediate = true, metatype = true)
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "MyRelatedGroupsSearchBatchResultProcessor") })
-@Service(value = SolrSearchBatchResultProcessor.class)
-public class MyRelatedGroupsSearchBatchResultProcessor implements
-    SolrSearchBatchResultProcessor {
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "MyRelatedGroupsSearchBatchResultWriter") })
+@Service(value = SolrSearchBatchResultWriter.class)
+public class MyRelatedGroupsSearchBatchResultWriter implements
+   SolrSearchBatchResultWriter {
 
   /**
    * "These go to eleven"
@@ -90,10 +87,7 @@ public class MyRelatedGroupsSearchBatchResultProcessor implements
   protected static final String AUTHORIZABLE_RT = "authorizable";
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(MyRelatedGroupsSearchBatchResultProcessor.class);
-
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
+      .getLogger(MyRelatedGroupsSearchBatchResultWriter.class);
 
   @Reference
   private ProfileService profileService;
@@ -214,18 +208,6 @@ public class MyRelatedGroupsSearchBatchResultProcessor implements
     } catch (RepositoryException e) {
       LOG.error(e.getMessage(), e);
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   * 
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      org.sakaiproject.nakamura.api.search.solr.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-
-    return searchServiceFactory.getSearchResultSet(request, query);
   }
 
 }

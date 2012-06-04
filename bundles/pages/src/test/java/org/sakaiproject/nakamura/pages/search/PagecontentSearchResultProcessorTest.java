@@ -45,6 +45,7 @@ import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 
@@ -103,20 +104,15 @@ public class PagecontentSearchResultProcessorTest {
     StringWriter stringWriter = new StringWriter();
     JSONWriter write = new JSONWriter(stringWriter);
 
-    SolrSearchResultProcessor proc = new SolrSearchResultProcessor() {
+    SolrSearchResultWriter writer = new SolrSearchResultWriter() {
       public void writeResult(SlingHttpServletRequest request, JSONWriter write,
           Result result) throws JSONException {
         int maxTraversalDepth = SearchUtil.getTraversalDepth(request);
         ExtendedJSONWriter.writeContentTreeToWriter(write, content, maxTraversalDepth);
       }
-
-      public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-          Query query) throws SolrSearchException {
-        return null;
-      }
     };
 
-    PagecontentSearchResultProcessor pagecontentSearchResultProcessor = new PagecontentSearchResultProcessor(fact, proc);
+    PageContentSearchResultWriter pagecontentSearchResultProcessor = new PageContentSearchResultWriter(writer);
     pagecontentSearchResultProcessor.writeResult(request, write, result);
 
     String output = stringWriter.toString();

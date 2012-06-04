@@ -31,12 +31,9 @@ import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.presence.PresenceService;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 
@@ -47,19 +44,16 @@ import javax.jcr.RepositoryException;
  */
 @Component(label = "%discussion.commentSearch.label", description = "%discussion.commentSearch.desc")
 @Service
-public class CommentSearchResultProcessor implements SolrSearchResultProcessor {
+public class CommentSearchResultWriter implements SolrSearchResultWriter {
 
   @Property(value = "The Sakai Foundation")
   static final String SERVICE_VENDOR = "service.vendor";
 
   @Property(value = "Comment")
-  static final String SEARCH_PROCESSOR = "sakai.search.processor";
+  static final String SEARCH_PROCESSOR = SolrSearchConstants.REG_WRITER_NAMES;
 
   @Reference
   private PresenceService presenceService;
-
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
 
   @Reference
   private BasicUserInfoService basicUserInfoService;
@@ -87,14 +81,4 @@ public class CommentSearchResultProcessor implements SolrSearchResultProcessor {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.SearchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      javax.jcr.query.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
-      throws SolrSearchException {
-    return searchServiceFactory.getSearchResultSet(request, query);
-  }
 }

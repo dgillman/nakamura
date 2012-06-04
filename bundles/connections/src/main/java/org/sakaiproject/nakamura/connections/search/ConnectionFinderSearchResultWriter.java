@@ -35,12 +35,9 @@ import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
@@ -50,17 +47,14 @@ import org.slf4j.LoggerFactory;
  * Formats connection search results. We get profile nodes from the query and make a
  * uniformed result.
  */
-@Component(description = "Formatter for connection search results", label = "ConnectionFinderSearchResultProcessor")
+@Component(description = "Formatter for connection search results", label = "ConnectionFinderSearchResultWriter")
 @Properties({ @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.processor", value = "ConnectionFinder") })
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "ConnectionFinder") })
 @Service
-public class ConnectionFinderSearchResultProcessor implements SolrSearchResultProcessor {
+public class ConnectionFinderSearchResultWriter implements SolrSearchResultWriter {
 
   private static final Logger logger = LoggerFactory
-      .getLogger(ConnectionFinderSearchResultProcessor.class);
-
-  @Reference
-  SolrSearchServiceFactory searchServiceFactory;
+      .getLogger(ConnectionFinderSearchResultWriter.class);
 
   @Reference
   BasicUserInfoService basicUserInfoService;
@@ -98,15 +92,5 @@ public class ConnectionFinderSearchResultProcessor implements SolrSearchResultPr
     } catch (AccessDeniedException ignored) {
       // user can't read the contact's profile, that's ok, just skip
     }
-  }
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.SearchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      javax.jcr.query.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    return searchServiceFactory.getSearchResultSet(request, query);
   }
 }

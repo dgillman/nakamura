@@ -34,12 +34,9 @@ import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
 import org.sakaiproject.nakamura.api.message.MessageConstants;
 import org.sakaiproject.nakamura.api.presence.PresenceService;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
@@ -59,26 +56,23 @@ import javax.jcr.RepositoryException;
  */
 @Component(label = "%discussion.threadedSearchBatch.label", description = "%discussion.threadedSearchBatch.desc")
 @Service
-public class DiscussionThreadedSearchBatchResultProcessor implements
-    SolrSearchBatchResultProcessor {
+public class DiscussionThreadedSearchBatchResultWriter implements
+   SolrSearchBatchResultWriter {
 
   public static final Logger LOG = LoggerFactory
-      .getLogger(DiscussionThreadedSearchBatchResultProcessor.class);
+      .getLogger(DiscussionThreadedSearchBatchResultWriter.class);
 
   @Property(value = "The Sakai Foundation")
   static final String SERVICE_VENDOR = "service.vendor";
 
   @Property(value = "DiscussionThreaded")
-  static final String SEARCH_BATCHPROCESSOR = "sakai.search.batchprocessor";
+  static final String SEARCH_BATCHPROCESSOR = SolrSearchConstants.REG_BATCH_WRITER_NAMES;
 
   @Reference
   PresenceService presenceService;
 
   @Reference
   BasicUserInfoService basicUserInfoService;
-
-  @Reference
-  SolrSearchServiceFactory searchServiceFactory;
 
   /**
    * {@inheritDoc}
@@ -144,15 +138,4 @@ public class DiscussionThreadedSearchBatchResultProcessor implements
     }
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      java.lang.String)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
-      throws SolrSearchException {
-      // Return the result set.
-      return searchServiceFactory.getSearchResultSet(request, query);
-  }
 }

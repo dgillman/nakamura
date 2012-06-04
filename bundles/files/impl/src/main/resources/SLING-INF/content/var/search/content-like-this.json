@@ -9,7 +9,7 @@
     "sortOrder": "desc",
     "_contentQuery": ""
   },
-  "sakai:batchresultprocessor": "RelatedContentSearchBatchResultProcessor",
+  "sakai:batchresultprocessor": "RelatedContentSearchBatchResultWriter",
   "sakai:propertyprovider" : ["ContentLikeThisPropertyProvider"],
   "sakai:title": "Content like this",
   "sakai:shortDescription": "Find content items similar to a given content item.",

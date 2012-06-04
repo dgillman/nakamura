@@ -35,7 +35,7 @@ import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -52,18 +52,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-@Component(immediate = true, label = "MostActiveGroupSearchBatchResultProcessor", description = "Formatter for most active groups")
+@Component(immediate = true, label = "MostActiveGroupsSearchBatchResultWriter", description = "Formatter for most active groups")
 @Service
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.batchprocessor", value = "MostActiveGroups") })
-public class MostActiveGroupsSearchBatchResultProcessor implements
-    SolrSearchBatchResultProcessor {
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "MostActiveGroups") })
+public class MostActiveGroupsSearchBatchResultWriter implements
+   SolrSearchBatchResultWriter {
 
   public static final String STARTPAGE_PARAM = "startpage";
   public static final String NUMITEMS_PARAM = "numitems";
 
   private static final Logger LOG = LoggerFactory
-      .getLogger(MostActiveGroupsSearchBatchResultProcessor.class);
+      .getLogger(MostActiveGroupsSearchBatchResultWriter.class);
 
   @Reference
   private SolrSearchServiceFactory searchServiceFactory;
@@ -192,18 +192,6 @@ public class MostActiveGroupsSearchBatchResultProcessor implements
     write.endObject();
   }
 
-  /**
-   * {@inheritDoc}
-   * 
-   * @see org.sakaiproject.nakamura.api.search.SearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      javax.jcr.query.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    // Return the result set.
-    return searchServiceFactory.getSearchResultSet(request, query);
-  }
-
   public class ResourceActivity implements Comparable<ResourceActivity> {
     public final String id;
     public final String name;
@@ -265,8 +253,8 @@ public class MostActiveGroupsSearchBatchResultProcessor implements
       }
     }
 
-    private MostActiveGroupsSearchBatchResultProcessor getOuterType() {
-      return MostActiveGroupsSearchBatchResultProcessor.this;
+    private MostActiveGroupsSearchBatchResultWriter getOuterType() {
+      return MostActiveGroupsSearchBatchResultWriter.this;
     }
   }
 }

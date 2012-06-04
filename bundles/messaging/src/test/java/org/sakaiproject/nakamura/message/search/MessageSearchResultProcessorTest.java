@@ -50,7 +50,7 @@ import java.io.Writer;
 @RunWith(MockitoJUnitRunner.class)
 public class MessageSearchResultProcessorTest {
 
-  private MessageSearchResultProcessor proc;
+  private MessageSearchResultWriter proc;
 
   @Mock
   private LiteMessagingService messagingService;
@@ -75,7 +75,7 @@ public class MessageSearchResultProcessorTest {
 
   @Before
   public void setUp() throws Exception {
-    proc = new MessageSearchResultProcessor();
+    proc = new MessageSearchResultWriter();
     proc.messagingService = messagingService;
 
     when(request.getResourceResolver()).thenReturn(resolver);

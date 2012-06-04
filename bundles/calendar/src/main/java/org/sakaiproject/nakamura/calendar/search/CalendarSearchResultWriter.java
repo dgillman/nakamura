@@ -20,7 +20,6 @@ package org.sakaiproject.nakamura.calendar.search;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
-import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.commons.json.JSONException;
@@ -31,13 +30,9 @@ import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,24 +43,10 @@ import org.slf4j.LoggerFactory;
 @Component
 @Service
 @Properties({ @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "Calendar") })
-public class CalendarSearchResultProcessor implements SolrSearchResultProcessor {
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "Calendar") })
+public class CalendarSearchResultWriter implements SolrSearchResultWriter {
   private static final Logger LOGGER = LoggerFactory
-      .getLogger(CalendarSearchResultProcessor.class);
-
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      java.lang.String)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    return searchServiceFactory.getSearchResultSet(request, query);
-  }
+      .getLogger(CalendarSearchResultWriter.class);
 
   /**
    * {@inheritDoc}

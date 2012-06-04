@@ -15,7 +15,7 @@
  * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package org.sakaiproject.nakamura.presence.search;
+package org.sakaiproject.nakamura.search.processors;
 
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Properties;
@@ -24,6 +24,7 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.io.JSONWriter;
 import org.sakaiproject.nakamura.api.lite.Session;
@@ -33,49 +34,26 @@ import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.authorizable.User;
-import org.sakaiproject.nakamura.api.presence.PresenceService;
-import org.sakaiproject.nakamura.api.presence.PresenceUtils;
-import org.sakaiproject.nakamura.api.profile.ProfileService;
-import org.sakaiproject.nakamura.api.search.solr.Query;
+import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
+import org.sakaiproject.nakamura.api.user.BasicUserInfoService;
+import org.sakaiproject.nakamura.util.DateUtils;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 
-import javax.jcr.RepositoryException;
+import java.util.Date;
 
 
-// TODO: move this into the right bundle, presence is not the right bundle.
-@Component(label = "UserSearchResultProcessor", description = "Formatter for user search results.")
-@Properties(value = {
+@Component(label = "GroupJoinRequestSearchResultWriter", description = "Formatter for group join request search results.")
+@Properties({
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.processor", value = "User") })
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "GroupJoinRequest") })
 @Service
-public class UserSearchResultProcessor implements SolrSearchResultProcessor {
+public class GroupJoinRequestSearchResultWriter implements SolrSearchResultWriter {
 
   @Reference
-  private PresenceService presenceService;
-
-  @Reference
-  private ProfileService profileService;
-
-
-  @Reference
-  private SolrSearchServiceFactory searchServiceFactory;
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.SearchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      javax.jcr.query.Query)
-   */
-  public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
-      Query query) throws SolrSearchException {
-    // return the result set
-    return searchServiceFactory.getSearchResultSet(request, query);
-  }
+  private BasicUserInfoService basicUserInfoService;
 
   /**
    * {@inheritDoc}
@@ -85,28 +63,37 @@ public class UserSearchResultProcessor implements SolrSearchResultProcessor {
    *      org.sakaiproject.nakamura.api.search.Aggregator, javax.jcr.query.Row)
    */
   public void writeResult(SlingHttpServletRequest request, JSONWriter write, Result result)
-  throws JSONException {
+      throws JSONException {
     javax.jcr.Session jcrSession = request.getResourceResolver().adaptTo(javax.jcr.Session.class);
     Session session = StorageClientUtils.adaptToSession(jcrSession);
-    String path = result.getPath();
     String userId = (String) result.getFirstValue(User.NAME_FIELD);
     if (userId != null) {
       try {
         AuthorizableManager authMgr = session.getAuthorizableManager();
-        Authorizable auth = authMgr.findAuthorizable(path);
+        Authorizable auth = authMgr.findAuthorizable(userId);
 
-        write.object();
-        ValueMap map = profileService.getProfileMap(auth, jcrSession);
-        ((ExtendedJSONWriter)write).valueMapInternals(map);
-        PresenceUtils.makePresenceJSON(write, userId, presenceService, true);
-        write.endObject();
+        if (auth != null) {
+          write.object();
+          ValueMap map = new ValueMapDecorator(basicUserInfoService.getProperties(auth));
+          ((ExtendedJSONWriter)write).valueMapInternals(map);
+          write.key("_created");
+          Long created = (Long) result.getFirstValue(Content.CREATED_FIELD);
+          Date createdDate = null;
+          if ( created != null) {
+            createdDate = new Date(created);
+          } else {
+            createdDate = new Date();
+          }
+          write.value(DateUtils.iso8601(createdDate));
+          write.endObject();
+        }
       } catch (StorageClientException e) {
         throw new RuntimeException(e.getMessage(), e);
       } catch (AccessDeniedException e) {
+      } /*catch (RepositoryException e) {
         throw new RuntimeException(e.getMessage(), e);
-      } catch (RepositoryException e) {
-        throw new RuntimeException(e.getMessage(), e);
-      }
+      }*/
     }
   }
+
 }
