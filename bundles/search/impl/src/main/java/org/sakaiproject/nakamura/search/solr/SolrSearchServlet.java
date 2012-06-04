@@ -23,11 +23,13 @@ import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.JSON
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_ITEMS_PER_PAGE;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_PAGE;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_BATCHRESULTPROCESSOR;
+import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_BATCHRESULTWRITER;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_PROPERTY_PROVIDER;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE_DEFAULTS;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE_OPTIONS;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_RESULTPROCESSOR;
+import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_RESULTWRITER;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_SEARCHRESPONSEDECORATOR;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SEARCH_PATH_PREFIX;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.TIDY;
@@ -61,10 +63,12 @@ import org.sakaiproject.nakamura.api.search.solr.MissingParameterException;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.sakaiproject.nakamura.api.templates.TemplateService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
@@ -150,6 +154,12 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   private SearchBatchResultProcessorTracker searchBatchResultProcessorTracker;
 
   @Reference
+  private SolrSearchResultWriterTracker searchResultWriterTracker;
+
+  @Reference
+  private SolrSearchBatchResultWriterTracker searchBatchResultWriterTracker;
+
+  @Reference
   private SolrSearchPropertyProviderTracker searchPropertyProviderTracker;
 
   @Reference
@@ -159,7 +169,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   // Default processors
   /**
    * Reference uses property set on NodeSearchResultProcessor. Other processors can become
-   * the default by setting {@link SearchResultProcessor.DEFAULT_PROCESOR_PROP} to true.
+   * the default by setting {@link SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP} to true.
    */
   private static final String DEFAULT_BATCH_SEARCH_PROC_TARGET = "(&("
       + SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP + "=true))";
@@ -168,12 +178,31 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
 
   /**
    * Reference uses property set on NodeSearchResultProcessor. Other processors can become
-   * the default by setting {@link SearchResultProcessor.DEFAULT_PROCESSOR_PROP} to true.
+   * the default by setting {@link SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP} to true.
    */
   private static final String DEFAULT_SEARCH_PROC_TARGET = "(&("
       + SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP + "=true))";
   @Reference(target = DEFAULT_SEARCH_PROC_TARGET)
   protected transient SolrSearchResultProcessor defaultSearchProcessor;
+
+  // Default writers
+  /**
+   * Reference uses property set on NodeSearchResultWriter. Other processors can become
+   * the default by setting {@link SolrSearchResultWriter.DEFAULT_WRITER_PROP} to true.
+   */
+  private static final String DEFAULT_BATCH_SEARCH_WRITE_TARGET = "(&("
+      + SolrSearchBatchResultWriter.DEFAULT_BATCH_WRITER_PROP + "=true))";
+  @Reference(target = DEFAULT_BATCH_SEARCH_WRITE_TARGET)
+  protected transient SolrSearchBatchResultWriter defaultSearchBatchWriter;
+
+  /**
+   * Reference uses property set on NodeSearchResultWriter. Other processors can become
+   * the default by setting {@link SolrSearchResultWriter.DEFAULT_WRITER_PROP} to true.
+   */
+  private static final String DEFAULT_SEARCH_WRITE_TARGET = "(&("
+      + SolrSearchResultWriter.DEFAULT_WRITER_PROP + "=true))";
+  @Reference(target = DEFAULT_SEARCH_WRITE_TARGET)
+  protected transient SolrSearchResultWriter defaultSearchWriter;
 
   @Reference
   private transient TemplateService templateService;
@@ -241,6 +270,26 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
           }
         }
 
+        // Get the
+        SolrSearchBatchResultWriter searchBatchWriter = defaultSearchBatchWriter;
+        if (node.hasProperty(SAKAI_BATCHRESULTWRITER)) {
+          searchBatchWriter = searchBatchResultWriterTracker.getByName(node.getProperty(
+              SAKAI_BATCHRESULTWRITER).getString());
+          useBatch = true;
+          if (searchBatchWriter == null) {
+            searchBatchWriter = defaultSearchBatchWriter;
+          }
+        }
+
+        SolrSearchResultWriter searchWriter = defaultSearchWriter;
+        if (node.hasProperty(SAKAI_RESULTWRITER)) {
+          searchWriter = searchResultWriterTracker.getByName(node.getProperty(SAKAI_RESULTWRITER)
+              .getString());
+          if (searchWriter == null) {
+            searchWriter = defaultSearchWriter;
+          }
+        }
+
         SolrSearchResultSet rs;
         try {
           // Prepare the result set.
@@ -271,7 +320,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
         Iterator<Result> iterator = rs.getResultSetIterator();
         if (useBatch) {
           LOGGER.info("Using batch processor for results");
-          searchBatchProcessor.writeResults(request, write, iterator);
+          searchBatchWriter.writeResults(request, write, iterator);
         } else {
           LOGGER.info("Using regular processor for results");
           // We don't skip any rows ourselves here.
@@ -281,7 +330,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
             Result result = iterator.next();
 
             // Write the result for this row.
-            searchProcessor.writeResult(request, write, result);
+            searchWriter.writeResult(request, write, result);
           }
         }
         write.endArray();
@@ -321,9 +370,8 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
    *
    * @param request
    *          the request.
-   * @param queryTemplate
-   *          the query template.
-   * @param propertyProviderName
+   * @param queryNode
+   *          node containing the query template.
    * @return A processed query template
    * @throws MissingParameterException
    */
@@ -458,7 +506,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
    * defaults but the property provider to have the final say in what value is set.
    *
    * @param request
-   * @param propertyProviderName
+   * @param propertyProviderNames
    * @return
    * @throws RepositoryException
    */

@@ -23,11 +23,10 @@ import org.apache.sling.commons.json.io.JSONWriter;
 
 import java.util.Iterator;
 
-public interface SolrSearchBatchResultProcessor {
+public interface SolrSearchBatchResultWriter {
 
-  String DEFAULT_BATCH_PROCESSOR_PROP = "sakai.solr.search.processor.batch.default";
+  String DEFAULT_BATCH_WRITER_PROP = "sakai.solr.search.writer.batch.default";
 
-  SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
-      throws SolrSearchException;
-
+  void writeResults(SlingHttpServletRequest request, JSONWriter write,
+      Iterator<Result> iterator) throws JSONException;
 }

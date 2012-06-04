@@ -59,6 +59,14 @@ public interface SolrSearchConstants {
    *
    */
   public static final String REG_BATCH_PROCESSOR_NAMES = "sakai.search.batchprocessor";
+  /**
+   *
+   */
+  public static final String REG_WRITER_NAMES = "sakai.search.writer";
+  /**
+   *
+   */
+  public static final String REG_BATCH_WRITER_NAMES = "sakai.search.batchprocessor";
 
   /**
    *
@@ -95,6 +103,10 @@ public interface SolrSearchConstants {
    *
    */
   public static final String SAKAI_RESULTPROCESSOR = "sakai:resultprocessor";
+  /**
+   *
+   */
+  public static final String SAKAI_RESULTWRITER = "sakai:resultwriter";
 
   public static final String SAKAI_SEARCHRESPONSEDECORATOR = "sakai:searchresponsedecorator";
 
@@ -102,6 +114,10 @@ public interface SolrSearchConstants {
    *
    */
   public static final String SAKAI_BATCHRESULTPROCESSOR = "sakai:batchresultprocessor";
+  /**
+   *
+   */
+  public static final String SAKAI_BATCHRESULTWRITER = "sakai:batchresultwriter";
   /**
   *
   */

@@ -27,8 +27,4 @@ public interface SolrSearchResultProcessor {
 
   SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
       throws SolrSearchException;
-
-  void writeResult(SlingHttpServletRequest request, JSONWriter write, Result result)
-      throws JSONException;
-
 }
