@@ -63,15 +63,15 @@ import java.util.Set;
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "RelatedContentSearchBatchResultWriter") })
 @Service(value = SolrSearchBatchResultWriter.class)
-public class RelatedContentSearchBatchResultWriter extends
-   LiteFileSearchBatchResultWriter {
+public class RelatedContentSearchBatchResultWriter extends LiteFileSearchBatchResultWriter
+   implements SolrSearchBatchResultWriter {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(RelatedContentSearchBatchResultWriter.class);
 
-  private static final String DEFAULT_SEARCH_WRITE_TARGET = "(&("
-      + SolrSearchResultWriter.DEFAULT_WRITER_PROP + "=true))";
-  @Reference(target = DEFAULT_SEARCH_WRITE_TARGET)
+  private static final String DEFAULT_SEARCH_PROC_TARGET = "(&("
+      + SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP + "=true))";
+  @Reference(target = DEFAULT_SEARCH_PROC_TARGET)
   private transient SolrSearchResultProcessor defaultSearchProcessor;
 
   /**
