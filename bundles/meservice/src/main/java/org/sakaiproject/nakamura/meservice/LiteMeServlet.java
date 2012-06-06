@@ -147,6 +147,9 @@ public class LiteMeServlet extends SlingSafeMethodsServlet {
   private static final String LOCALE_FIELD = "locale";
   private static final String TIMEZONE_FIELD = "timezone";
 
+  private static final String PROFILE_ELEMENTS[] = {UserConstants.USER_FIRSTNAME_PROPERTY,
+    UserConstants.USER_LASTNAME_PROPERTY, UserConstants.USER_EMAIL_PROPERTY, UserConstants.USER_PICTURE};
+
   @Reference
   protected transient LiteMessagingService messagingService;
 
@@ -207,9 +210,14 @@ public class LiteMeServlet extends SlingSafeMethodsServlet {
       ExtendedJSONWriter writer = new ExtendedJSONWriter(w);
       writer.object(); // start output object
 
-      // Dump this user his info
-      Map<String, Object> counts = writeProfile(au, writer);
+      writer.key("userid");
+      writer.value(userId);
 
+      Map<String, Object> userProps = basicUserInfoService.getProperties(au);
+      Map<String, Object> counts = (Map<String, Object>)userProps.remove(UserConstants.COUNTS_PROP);
+
+      // Dump this user his info
+      writeProfile(userProps, writer);
       writeLocale(writer, getProperties(au), request);
 
       writeCounts(request, response, session, au, writer, counts);
@@ -240,20 +248,27 @@ public class LiteMeServlet extends SlingSafeMethodsServlet {
   }
 
   /**
-   * @param au
+   * @param props
    * @param writer
    * @return
    * @throws JSONException
    */
-  protected Map<String, Object> writeProfile(Authorizable au, ExtendedJSONWriter writer)
+  protected void writeProfile(Map<String, Object> props, ExtendedJSONWriter writer)
       throws JSONException {
+    writer.key("homePath");
+    writer.value(props.get("homePath"));
     writer.key("profile");
-    Map<String, Object> props = basicUserInfoService.getProperties(au);
-    // remove the counts to be displayed further down
-    Map<String, Object> counts = (Map<String, Object>) props.remove(UserConstants.COUNTS_PROP);
-    ValueMap profile = new ValueMapDecorator(props);
-    writer.valueMap(profile);
-    return counts;
+
+    Map<String, Object> filteredProps = new HashMap<String, Object> ();
+
+    for (String profileElement : PROFILE_ELEMENTS) {
+      if (props.containsKey(profileElement)) {
+        filteredProps.put(profileElement, props.get(profileElement));
+      }
+    }
+
+    ValueMap profileMap = new ValueMapDecorator (filteredProps);
+    writer.valueMap(profileMap);
   }
 
   /**
