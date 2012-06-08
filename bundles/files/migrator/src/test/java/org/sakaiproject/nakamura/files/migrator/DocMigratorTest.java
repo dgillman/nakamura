@@ -17,19 +17,14 @@
  */
 package org.sakaiproject.nakamura.files.migrator;
 
-import static org.mockito.Mockito.mock;
-
 import com.google.common.collect.ImmutableMap;
-
 import junit.framework.Assert;
-
 import org.apache.sling.commons.json.JSONArray;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.sakaiproject.nakamura.api.files.FilesConstants;
-import org.sakaiproject.nakamura.api.lite.ClientPoolException;
 import org.sakaiproject.nakamura.api.lite.Repository;
 import org.sakaiproject.nakamura.api.lite.Session;
 import org.sakaiproject.nakamura.api.lite.StorageClientException;
@@ -48,6 +43,8 @@ import org.sakaiproject.nakamura.lite.BaseMemoryRepository;
 import org.sakaiproject.nakamura.util.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -253,7 +250,6 @@ public class DocMigratorTest extends Assert {
       .getJSONArray("columns").length());
   }
 
-  @Test
   public void testKern2759Redux() throws Exception {
     JSONObject group = readJSONFromFile("KERN2759Redux.json");
     JSONObject migrated = docMigrator.createNewPageStructure(
@@ -318,7 +314,7 @@ public class DocMigratorTest extends Assert {
     // ensure that the ltiKeys node was migrated
     adminSession = repository.loginAdministrative();
     Content ltiKeys = adminSession.getContentManager().get(
-        "/testBasicLtiSecretsMigrate/id1587576/id5404779/basiclti/ltiKeys");
+        "/testBasicLtiSecretsMigrate/id5404779/basiclti/ltiKeys");
     Assert.assertNotNull(ltiKeys);
     Assert.assertEquals("the-key", ltiKeys.getProperty("key"));
     Assert.assertEquals("the-secret", ltiKeys.getProperty("secret"));
@@ -327,9 +323,9 @@ public class DocMigratorTest extends Assert {
     // verify ltiKeys was locked down again to not expose lti secrets
     userSession = repository.login("test", "test");
     Assert.assertFalse(userSession.getContentManager().exists(
-        "/testBasicLtiSecretsMigrate/id1587576/id5404779/basiclti/ltiKeys"));
+        "/testBasicLtiSecretsMigrate/id5404779/basiclti/ltiKeys"));
   }
-  
+
   /**
    * Apply the necessary access control entries so that only admin users can read/write
    * the sensitive node.
@@ -354,4 +350,5 @@ public class DocMigratorTest extends Assert {
             new AclModification(AclModification.denyKey(currentUserId), Permissions.ALL
                 .getPermission(), Operation.OP_REPLACE) });
   }
+  
 }
