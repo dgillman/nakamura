@@ -17,6 +17,7 @@
  */
 package org.sakaiproject.nakamura.meservice;
 
+import com.google.common.base.Joiner;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Modified;
@@ -83,35 +84,42 @@ import javax.servlet.http.HttpServletResponse;
     @ServiceResponse(code = 200, description = "Request for information was successful. <br />"
         + "A JSON representation of the current user is returned. E.g. for an anonymous user:"
         + "<pre>{\n" +
-      "    \"user\": {\n" +
-      "        \"anon\": true,\n" +
-      "        \"subjects\": [],\n" +
-      "        \"superUser\": false\n" +
-      "    },\n" +
-      "    \"eventbus\": \"http://localhost:8080/system/uievent/default?token=YW5vbnltb3VzOzEzMGYzMmU3NDM3O2RlZmF1bHQ7ZXdLeUlvQ3phUnNXRlBXMHFyVFlsKzFQVkMwPQ&server=2324-Zachs-Mac.local&user=anonymous\",\n" +
-      "    \"profile\": {\n" +
-      "        \"basic\": {\n" +
-      "            \"access\": \"everybody\",\n" +
-      "            \"elements\": {\n" +
-      "                \"lastName\": {\n" +
-      "                    \"value\": \"User\"\n" +
-      "                },\n" +
-      "                \"email\": {\n" +
-      "                    \"value\": \"anon@sakai.invalid\"\n" +
-      "                },\n" +
-      "                \"firstName\": {\n" +
-      "                    \"value\": \"Anonymous\"\n" +
-      "                }\n" +
-      "            }\n" +
-      "        },\n" +
-      "        \"rep:userId\": \"anonymous\"\n" +
-      "    },\n" +
-      "    \"messages\": {\n" +
-      "        \"unread\": 0\n" +
-      "    },\n" +
-      "    \"contacts\": {},\n" +
-      "    \"groups\": []\n" +
-      "}<pre>"),
+        "   \"homePath\": \"/~johndoe\",\n" +
+        "   \"userid\": \"Bert\", \n" +
+        "   \"profile\": { \n" +
+        "       \"picture\": { \n" +
+        "           \"name\": \"256x256_tmp1336495195251.jpg\", \n" +
+        "           \"original\": \"tmp1336495195251.jpg\", \n" +
+        "           \"selectedx1\": 30, \n" +
+        "           \"selectedy1\": 108, \n" +
+        "           \"selectedx2\": 94, \n" +
+        "           \"selectedy2\": 172 \n" +
+        "       }, \n" +
+        "       \"lastName\": \"Pareyn\", \n" +
+        "       \"email\": \"bp323@caret.cam.ac.uk\", \n" +
+        "       \"firstName\": \"Bert\" \n" +
+        "   }, \n" +
+        "   \"locale\": { \n" +
+        "       \"country\": \"GB\", \n" +
+        "       \"displayCountry\": \"United Kingdom\", \n" +
+        "       \"displayLanguage\": \"English\", \n" +
+        "       \"displayName\": \"English (United Kingdom)\", \n" +
+        "       \"ISO3Country\": \"GBR\", \n" +
+        "       \"ISO3Language\": \"eng\", \n" +
+        "       \"language\": \"en\", \n" +
+        "       \"timezone\": { \n" +
+        "           \"name\": \"Europe/London\", \n" +
+        "           \"GMT\": 1 \n" +
+        "       } \n" +
+        "   }, \n" +
+        "   \"counts\": { \n" +
+        "       \"content\": 51, \n" +
+        "       \"contacts\": 2, \n" +
+        "       \"memberships\": 3, \n" +
+        "       \"collections\": 232, \n" +
+        "       \"unreadMessages\": 12 \n" +
+        "   } \n" +
+        "}<pre>"),
     @ServiceResponse(code = 401, description = "Unauthorized: credentials provided were not acceptable to return information for."),
     @ServiceResponse(code = 500, description = "Unable to return information about current user.") }))
 @SlingServlet(paths = { "/system/me" }, generateComponent = false, methods = { "GET" })
@@ -394,40 +402,6 @@ public class LiteMeServlet extends SlingSafeMethodsServlet {
     write.endObject(); // end "timezone"
 
     write.endObject(); // end "locale"
-  }
-
-  /**
-   * Get a valid {@link Locale}. Checks <code>properties</code> for a locale setting.
-   * Defaults to the server configured language and country code.
-   *
-   * @param properties
-   * @return
-   */
-  protected Locale getLocale(Map<String, Object> properties) {
-    /* Get the correct locale */
-    String localeLanguage = defaultLanguage;
-    String localeCountry = defaultCountry;
-    if (properties.containsKey(LOCALE_FIELD)) {
-      String localeProp = String.valueOf(properties.get(LOCALE_FIELD));
-      Matcher localeMatcher = LOCALE_REGEX.matcher(localeProp);
-      if (localeMatcher.matches()) {
-        localeLanguage = localeMatcher.group(1);
-        if (localeMatcher.groupCount() == 3 && localeMatcher.group(3) != null) {
-          localeCountry = localeMatcher.group(3).toUpperCase();
-        } else {
-          localeCountry = "";
-        }
-      } else {
-        LOG.info("Using default locale [{}_{}] instead of locale setting [{}]",
-            new Object[] { localeLanguage, localeCountry, localeProp });
-      }
-    } else {
-      LOG.info("Using default locale [{}_{}]; no locale setting found", new Object[] {
-          localeLanguage, localeCountry });
-    }
-
-    Locale locale = new Locale(localeLanguage, localeCountry);
-    return locale;
   }
 
   private Map<String, Object> getProperties(Authorizable authorizable) {
