@@ -34,6 +34,7 @@ import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -54,7 +55,8 @@ import java.util.Collection;
 
 @Component(immediate = true, metatype = true)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.processor", value = "AllFiles") })
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "AllFiles"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "AllFiles") })
 @Service
 public class AllFilesSearchResultProcessor implements SolrSearchResultProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(AllFilesSearchResultProcessor.class);

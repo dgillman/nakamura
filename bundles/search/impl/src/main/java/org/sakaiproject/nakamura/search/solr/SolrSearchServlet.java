@@ -22,71 +22,50 @@ import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.FACE
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.JSON_RESULTS;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_ITEMS_PER_PAGE;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_PAGE;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_BATCHRESULTPROCESSOR;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_PROPERTY_PROVIDER;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE_DEFAULTS;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE_OPTIONS;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_RESULTPROCESSOR;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_SEARCHRESPONSEDECORATOR;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SEARCH_PATH_PREFIX;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.TIDY;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.TOTAL;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
-import org.apache.commons.lang.StringUtils;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.sling.SlingServlet;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
-import org.apache.sling.api.request.RequestParameter;
-import org.apache.sling.api.request.RequestParameterMap;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.solr.client.solrj.response.FacetField;
-import org.apache.solr.client.solrj.util.ClientUtils;
 import org.sakaiproject.nakamura.api.doc.ServiceDocumentation;
 import org.sakaiproject.nakamura.api.doc.ServiceMethod;
 import org.sakaiproject.nakamura.api.doc.ServiceParameter;
 import org.sakaiproject.nakamura.api.doc.ServiceResponse;
+import org.sakaiproject.nakamura.api.lite.Session;
+import org.sakaiproject.nakamura.api.lite.StorageClientException;
+import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
+import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
+import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.search.SearchResponseDecorator;
-import org.sakaiproject.nakamura.api.search.SearchResultProcessor;
-import org.sakaiproject.nakamura.api.search.SearchUtil;
-import org.sakaiproject.nakamura.api.search.solr.MissingParameterException;
-import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SearchTemplate;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
-import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
-import org.sakaiproject.nakamura.api.templates.TemplateService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
-import org.sakaiproject.nakamura.util.JcrUtils;
-import org.sakaiproject.nakamura.util.LitePersonalUtils;
 import org.sakaiproject.nakamura.util.telemetry.TelemetryCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.jcr.Node;
-import javax.jcr.PropertyIterator;
 import javax.jcr.RepositoryException;
-import javax.jcr.Value;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 
@@ -144,383 +123,151 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrSearchServlet.class);
 
   @Reference
-  private SearchResultProcessorTracker searchResultProcessorTracker;
-
-  @Reference
-  private SearchBatchResultProcessorTracker searchBatchResultProcessorTracker;
-
-  @Reference
-  private SolrSearchPropertyProviderTracker searchPropertyProviderTracker;
+  protected transient SolrSearchServiceFactory searchServiceFactory;
 
   @Reference
   private SearchResponseDecoratorTracker searchResponseDecoratorTracker;
 
-
-  // Default processors
-  /**
-   * Reference uses property set on NodeSearchResultProcessor. Other processors can become
-   * the default by setting {@link SearchResultProcessor.DEFAULT_PROCESOR_PROP} to true.
-   */
-  private static final String DEFAULT_BATCH_SEARCH_PROC_TARGET = "(&("
-      + SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP + "=true))";
-  @Reference(target = DEFAULT_BATCH_SEARCH_PROC_TARGET)
-  protected transient SolrSearchBatchResultProcessor defaultSearchBatchProcessor;
-
-  /**
-   * Reference uses property set on NodeSearchResultProcessor. Other processors can become
-   * the default by setting {@link SearchResultProcessor.DEFAULT_PROCESSOR_PROP} to true.
-   */
-  private static final String DEFAULT_SEARCH_PROC_TARGET = "(&("
-      + SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP + "=true))";
-  @Reference(target = DEFAULT_SEARCH_PROC_TARGET)
-  protected transient SolrSearchResultProcessor defaultSearchProcessor;
+  @Reference
+  private SearchBatchJsonResultWriterTracker searchBatchResultWriterTracker;
 
   @Reference
-  private transient TemplateService templateService;
+  private SearchJsonResultWriterTracker searchResultWriterTracker;
+
+  // Default writers
+  /**
+   * Reference uses property set on NodeSearchResultProcessor. Other processors can become
+   * the default by setting {@link org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor.DEFAULT_PROCESOR_PROP} to true.
+   */
+  private static final String DEFAULT_BATCH_SEARCH_WRITE_TARGET = "(&("
+      + SolrSearchBatchJsonResultWriter.DEFAULT_BATCH_WRITER_PROP + "=true))";
+  @Reference(target = DEFAULT_BATCH_SEARCH_WRITE_TARGET)
+  protected transient SolrSearchBatchJsonResultWriter defaultJsonBatchWriter;
+
+  /**
+   * Reference uses property set on NodeSearchResultProcessor. Other processors can become
+   * the default by setting {@link org.sakaiproject.nakamura.api.search.SearchResultProcessor.DEFAULT_PROCESSOR_PROP} to true.
+   */
+  private static final String DEFAULT_SEARCH_WRITER_TARGET = "(&("
+      + SolrSearchJsonResultWriter.DEFAULT_WRITER_PROP + "=true))";
+  @Reference(target = DEFAULT_SEARCH_WRITER_TARGET)
+  protected transient SolrSearchJsonResultWriter defaultJsonResultWriter;
 
   @Override
   protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response)
       throws ServletException, IOException {
+    //this is presently duplicate code in the BackwardCompatibleSolrQueryFactory
+    long nitems = SolrSearchUtil.longRequestParameter(request, PARAMS_ITEMS_PER_PAGE,
+       DEFAULT_PAGED_ITEMS);
+    long page = SolrSearchUtil.longRequestParameter(request, PARAMS_PAGE, 0);
+
+    ResourceResolver resolver = request.getResourceResolver();
+    Resource resource = request.getResource();
+    if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
+      throw new IllegalStateException("unable to obtain Node from request");
+    }
+    TelemetryCounter.incrementValue("search", "SolrSearchServlet", resource.getPath());
+
     try {
-      Resource resource = request.getResource();
-      if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
-        response.sendError(HttpServletResponse.SC_FORBIDDEN,
-            "Search templates can only be executed if they are located under "
-                + SEARCH_PATH_PREFIX);
+      final Session session = StorageClientUtils.adaptToSession(resolver.adaptTo(javax.jcr.Session.class));
+      final Authorizable authz = session.getAuthorizableManager().findAuthorizable(request.getRemoteUser());
+      final Node node = resource.adaptTo(Node.class);
+
+      final SearchTemplate template = new JcrSearchTemplate(node);
+
+      final BackwardCompatibleSolrQueryFactory bcsqf = new BackwardCompatibleSolrQueryFactory(request, template);
+
+      long[] ranges = SolrSearchUtil.getOffsetAndSize(request, null);
+
+      final SolrSearchResultSet rs;
+      try {
+        rs = searchServiceFactory.getSearchResultSet(bcsqf, ranges[0], ranges[1], session,  authz);
+      } catch (SolrSearchException e) {
+        LOGGER.error(e.getMessage(), e);
+        response.sendError(e.getCode(), e.getMessage());
         return;
       }
-      TelemetryCounter.incrementValue("search", "SolrSearchServlet", resource.getPath());
-      Node node = resource.adaptTo(Node.class);
-      if (node != null && node.hasProperty(SAKAI_QUERY_TEMPLATE)) {
-        // KERN-1147 Respond better when all parameters haven't been provided for a query
-        Query query;
-        try {
-          query = processQuery(request, node);
-        } catch (MissingParameterException e) {
-          response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
-          return;
+
+      SolrSearchBatchJsonResultWriter batchResultWriter = defaultJsonBatchWriter;
+      SolrSearchJsonResultWriter resultWriter = defaultJsonResultWriter;
+
+      String temp = null;
+      if (template.isBatch()) {
+        temp = template.getBatchResultWriter();
+        if (temp != null) {
+          batchResultWriter = searchBatchResultWriterTracker.getByName(temp);
         }
-
-        long nitems = SolrSearchUtil.longRequestParameter(request, PARAMS_ITEMS_PER_PAGE,
-            DEFAULT_PAGED_ITEMS);
-        long page = SolrSearchUtil.longRequestParameter(request, PARAMS_PAGE, 0);
-
-        // allow number of items to be specified in sakai:query-template-options
-        if (query.getOptions().containsKey(PARAMS_ITEMS_PER_PAGE)) {
-          nitems = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
-        } else {
-          // add this to the options so that all queries are constrained to a limited
-          // number of returns per page.
-          query.getOptions().put(PARAMS_ITEMS_PER_PAGE, Long.toString(nitems));
+      } else {
+        temp = template.getResultWriter();
+        if (temp != null) {
+          resultWriter = searchResultWriterTracker.getByName(temp);
         }
-
-        if (!query.getOptions().containsKey(PARAMS_PAGE)) {
-          // add this to the options so that all queries are constrained to a limited
-          // number of returns per page.
-          query.getOptions().put(PARAMS_PAGE, Long.toString(page));
-        }
-
-        boolean useBatch = false;
-        // Get the
-        SolrSearchBatchResultProcessor searchBatchProcessor = defaultSearchBatchProcessor;
-        if (node.hasProperty(SAKAI_BATCHRESULTPROCESSOR)) {
-          searchBatchProcessor = searchBatchResultProcessorTracker.getByName(node.getProperty(
-              SAKAI_BATCHRESULTPROCESSOR).getString());
-          useBatch = true;
-          if (searchBatchProcessor == null) {
-            searchBatchProcessor = defaultSearchBatchProcessor;
-          }
-        }
-
-        SolrSearchResultProcessor searchProcessor = defaultSearchProcessor;
-        if (node.hasProperty(SAKAI_RESULTPROCESSOR)) {
-          searchProcessor = searchResultProcessorTracker.getByName(node.getProperty(SAKAI_RESULTPROCESSOR)
-              .getString());
-          if (searchProcessor == null) {
-            searchProcessor = defaultSearchProcessor;
-          }
-        }
-
-        SolrSearchResultSet rs;
-        try {
-          // Prepare the result set.
-          // This allows a processor to do other queries and manipulate the results.
-          if (useBatch) {
-            rs = searchBatchProcessor.getSearchResultSet(request, query);
-          } else {
-            rs = searchProcessor.getSearchResultSet(request, query);
-          }
-        } catch (SolrSearchException e) {
-          response.sendError(e.getCode(), e.getMessage());
-          return;
-        }
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
-        ExtendedJSONWriter write = new ExtendedJSONWriter(response.getWriter());
-        write.setTidy(isTidy(request));
-
-        write.object();
-        write.key(PARAMS_ITEMS_PER_PAGE);
-        write.value(nitems);
-        write.key(JSON_RESULTS);
-
-        write.array();
-
-        Iterator<Result> iterator = rs.getResultSetIterator();
-        if (useBatch) {
-          LOGGER.info("Using batch processor for results");
-          searchBatchProcessor.writeResults(request, write, iterator);
-        } else {
-          LOGGER.info("Using regular processor for results");
-          // We don't skip any rows ourselves here.
-          // We expect a rowIterator coming from a resultset to be at the right place.
-          for (long i = 0; i < nitems && iterator.hasNext(); i++) {
-            // Get the next row.
-            Result result = iterator.next();
-
-            // Write the result for this row.
-            searchProcessor.writeResult(request, write, result);
-          }
-        }
-        write.endArray();
-
-        // write the solr facets out if they exist
-        writeFacetFields(rs, write);
-
-        // write the total out after processing the list to give the underlying iterator
-        // a chance to walk the results then report how many there were.
-        write.key(TOTAL);
-        write.value(rs.getSize());
-
-        if ( node.hasProperty(SAKAI_SEARCHRESPONSEDECORATOR)) {
-          String[] decoratorNames = getStringArrayProp(node, SAKAI_SEARCHRESPONSEDECORATOR);
-          for ( String name : decoratorNames ) {
-            SearchResponseDecorator decorator = searchResponseDecoratorTracker.getByName(name);
-            if ( decorator != null ) {
-              decorator.decorateSearchResponse(request, write);
-            }
-          }
-        }
-
-        write.endObject();
       }
+
+      response.setContentType("application/json");
+      response.setCharacterEncoding("UTF-8");
+
+      ExtendedJSONWriter write = new ExtendedJSONWriter(response.getWriter());
+      write.setTidy(isTidy(request));
+
+      write.object();
+      write.key(PARAMS_ITEMS_PER_PAGE);
+      write.value(nitems);
+      write.key(JSON_RESULTS);
+
+      write.array();
+
+      Iterator<Result> iterator = rs.getResultSetIterator();
+      if (template.isBatch()) {
+        LOGGER.info("Using batch processor for results");
+        batchResultWriter.writeResults(request, write, iterator);
+      } else {
+        LOGGER.info("Using regular processor for results");
+        // We don't skip any rows ourselves here.
+        // We expect a rowIterator coming from a resultset to be at the right place.
+        for (long i = 0; i < nitems && iterator.hasNext(); i++) {
+          // Get the next row.
+          Result result = iterator.next();
+
+          // Write the result for this row.
+          resultWriter.writeResult(request, write, result);
+        }
+      }
+      write.endArray();
+
+      // write the solr facets out if they exist
+      writeFacetFields(rs, write);
+
+      // write the total out after processing the list to give the underlying iterator
+      // a chance to walk the results then report how many there were.
+      write.key(TOTAL);
+      write.value(rs.getSize());
+
+      String[] decoratorNames = template.getDecoratorNames();
+
+      for ( String name : decoratorNames ) {
+        SearchResponseDecorator decorator = searchResponseDecoratorTracker.getByName(name);
+        if ( decorator != null ) {
+          decorator.decorateSearchResponse(request, write);
+        }
+      }
+
+      write.endObject();
     } catch (RepositoryException e) {
       LOGGER.error(e.getMessage(), e);
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     } catch (JSONException e) {
       LOGGER.error(e.getMessage(), e);
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+    } catch (AccessDeniedException e) {
+      LOGGER.error(e.getMessage(), e);
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+    } catch (StorageClientException e) {
+      LOGGER.error(e.getMessage(), e);
+      response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     }
   }
 
-  /**
-   * Processes a velocity template so that variable references are replaced by the same
-   * properties in the property provider and request.
-   *
-   * @param request
-   *          the request.
-   * @param queryTemplate
-   *          the query template.
-   * @param propertyProviderName
-   * @return A processed query template
-   * @throws MissingParameterException
-   */
-  protected Query processQuery(SlingHttpServletRequest request, Node queryNode)
-      throws RepositoryException, MissingParameterException, JSONException {
-    // check the resource type and set the query type appropriately
-    // default to using solr for queries
-    javax.jcr.Property resourceType = queryNode.getProperty("sling:resourceType");
-    String queryType;
-    if ("sakai/sparse-search".equals(resourceType.getString())) {
-      queryType = Query.SPARSE;
-    } else {
-      queryType = Query.SOLR;
-    }
-
-    String[] propertyProviderNames = null;
-    if (queryNode.hasProperty(SAKAI_PROPERTY_PROVIDER)) {
-      propertyProviderNames = getStringArrayProp(queryNode, SAKAI_PROPERTY_PROVIDER);
-    }
-    PropertyIterator defaultValues = null;
-    if (queryNode.hasNode(SAKAI_QUERY_TEMPLATE_DEFAULTS)) {
-      Node defaults = queryNode.getNode(SAKAI_QUERY_TEMPLATE_DEFAULTS);
-      defaultValues = defaults.getProperties();
-    }
-    Map<String, String> propertiesMap = loadProperties(request, propertyProviderNames,
-        defaultValues, queryType);
-
-    String queryTemplate = queryNode.getProperty(SAKAI_QUERY_TEMPLATE).getString();
-
-    // process the query string before checking for missing terms to a) give processors a
-    // chance to set things and b) catch any missing terms added by the processors.
-    String queryString = templateService.evaluateTemplate(propertiesMap, queryTemplate);
-
-    // expand home directory references to full path; eg. ~user => a:user
-    queryString = SearchUtil.expandHomeDirectory(queryString);
-
-    // check for any missing terms & process the query template
-    Collection<String> missingTerms = templateService.missingTerms(queryString);
-    if (!missingTerms.isEmpty()) {
-      throw new MissingParameterException(
-          "Your request is missing parameters for the template: "
-              + StringUtils.join(missingTerms, ", "));
-    }
-
-    // collect query options
-    PropertyIterator queryOptions = null;
-    if (queryNode.hasNode(SAKAI_QUERY_TEMPLATE_OPTIONS)) {
-      Node queryOptionsNode = queryNode.getNode(SAKAI_QUERY_TEMPLATE_OPTIONS);
-      queryOptions = queryOptionsNode.getProperties();
-    }
-
-    // process the options as templates and check for missing params
-    Map<String, Object> options = processOptions(propertiesMap, queryOptions, queryType);
-
-    return new Query(queryNode.getPath(), queryType, queryString, options);
-  }
-
-  /**
-   * @param propertiesMap
-   * @param queryOptions
-   * @return
-   * @throws JSONException
-   * @throws MissingParameterException
-   */
-  private Map<String, Object> processOptions(Map<String, String> propertiesMap,
-      PropertyIterator queryOptions, String queryType) throws RepositoryException,
-      MissingParameterException {
-    Set<String> missingTerms = Sets.newHashSet();
-    Map<String, Object> options = Maps.newHashMap();
-    if (queryOptions != null) {
-      while (queryOptions.hasNext()) {
-        javax.jcr.Property prop = queryOptions.nextProperty();
-        String key = prop.getName();
-
-        if (!JcrUtils.isJCRProperty(key)) {
-          if (prop.isMultiple()) {
-            Set<String> processedVals = Sets.newHashSet();
-            Value[] vals = prop.getValues();
-            for (Value val : vals) {
-              String processedVal = processValue(key, val.getString(), propertiesMap,
-                  queryType, missingTerms);
-              processedVals.add(processedVal);
-            }
-            if (!processedVals.isEmpty()) {
-              options.put(key, processedVals);
-            }
-          } else {
-            String val = prop.getString();
-            String processedVal = processValue(key, val, propertiesMap, queryType,
-                missingTerms);
-            options.put(key, processedVal);
-          }
-        }
-      }
-    }
-
-    if (!missingTerms.isEmpty()) {
-      throw new MissingParameterException(
-          "Your request is missing parameters for the template: "
-              + StringUtils.join(missingTerms, ", "));
-    } else {
-      return options;
-    }
-  }
-
-  /**
-   * Process a value through the template service and check for missing fields.
-   *
-   * @param key
-   * @param val
-   * @param propertiesMap
-   * @param queryType
-   * @param missingTerms
-   * @return
-   */
-  private String processValue(String key, String val, Map<String, String> propertiesMap,
-      String queryType, Set<String> missingTerms) {
-    missingTerms.addAll(templateService.missingTerms(propertiesMap, val));
-    String processedVal = templateService.evaluateTemplate(propertiesMap, val);
-    if ("sort".equals(key)) {
-      processedVal = SearchUtil.escapeString(processedVal, queryType);
-    }
-    return processedVal;
-  }
-
-  /**
-   * Load properties from the query node, request and property provider.<br/>
-   *
-   * Overwrite order: query node &lt; request &lt; property provider<br/>
-   *
-   * This ordering allows the query node to set defaults, the request to override those
-   * defaults but the property provider to have the final say in what value is set.
-   *
-   * @param request
-   * @param propertyProviderName
-   * @return
-   * @throws RepositoryException
-   */
-  private Map<String, String> loadProperties(SlingHttpServletRequest request,
-      String[] propertyProviderNames, PropertyIterator defaultProps, String queryType) throws RepositoryException {
-    Map<String, String> propertiesMap = new HashMap<String, String>();
-
-    // 0. load authorizable (user) information
-    String userId = request.getRemoteUser();
-    String userPrivatePath = ClientUtils.escapeQueryChars(LitePersonalUtils
-        .getPrivatePath(userId));
-    propertiesMap.put("_userPrivatePath", userPrivatePath);
-    propertiesMap.put("_userId", ClientUtils.escapeQueryChars(userId));
-
-    // 1. load in properties from the query template node so defaults can be set
-    if (defaultProps != null) {
-      while (defaultProps.hasNext()) {
-        javax.jcr.Property prop = defaultProps.nextProperty();
-        String key = prop.getName();
-        if (!key.startsWith("jcr:") && !propertiesMap.containsKey(key) && !prop.isMultiple()) {
-          String val = prop.getString();
-          propertiesMap.put(key, val);
-        }
-      }
-    }
-
-    // 2. load in properties from the request
-    RequestParameterMap params = request.getRequestParameterMap();
-    for (Entry<String, RequestParameter[]> entry : params.entrySet()) {
-      RequestParameter[] vals = entry.getValue();
-      String requestValue = vals[0].getString();
-
-      // blank values aren't cool
-      if (StringUtils.isBlank(requestValue)) {
-        continue;
-      }
-
-      // we're selective with what we escape to make sure we don't hinder
-      // search functionality
-      String key = entry.getKey();
-      String val = SearchUtil.escapeString(requestValue, queryType);
-      propertiesMap.put(key, val);
-    }
-
-    // 3. load properties from a property provider
-    if (propertyProviderNames != null) {
-      for (String propertyProviderName : propertyProviderNames) {
-        LOGGER.debug("Trying Provider Name {} ", propertyProviderName);
-        SolrSearchPropertyProvider provider = searchPropertyProviderTracker.getByName(propertyProviderName);
-        if (provider != null) {
-          LOGGER.debug("Trying Provider {} ", provider);
-          provider.loadUserProperties(request, propertiesMap);
-        } else {
-          LOGGER.warn("No properties provider found for {} ", propertyProviderName);
-        }
-      }
-    } else {
-      LOGGER.debug("No Provider ");
-    }
-
-    return propertiesMap;
-  }
 
   /**
    * True if our request wants the "tidy" pretty-printed format Copied from
@@ -533,23 +280,6 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
       }
     }
     return false;
-  }
-
-  private String[] getStringArrayProp(Node queryNode, String propName) throws RepositoryException {
-    String[] propertyProviderNames;
-    javax.jcr.Property propProv = queryNode.getProperty(propName);
-    if (propProv.isMultiple()) {
-      Value[] propProvVals = propProv.getValues();
-      propertyProviderNames = new String[propProvVals.length];
-
-      for (int i = 0; i < propProvVals.length; i++) {
-        propertyProviderNames[i] = propProvVals[i].getString();
-      }
-    } else {
-      propertyProviderNames = new String[1];
-      propertyProviderNames[0] = propProv.getString();
-    }
-    return propertyProviderNames;
   }
 
   private void writeFacetFields(SolrSearchResultSet rs, ExtendedJSONWriter writer) throws JSONException {

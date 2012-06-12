@@ -53,7 +53,9 @@ import java.util.Map;
 @Component(immediate = true, label = "MostActiveContentSearchBatchResultProcessor", description = "Formatter for most active content")
 @Service(value = SolrSearchBatchResultProcessor.class)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.batchprocessor", value = "LiteMostActiveContent") })
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "LiteMostActiveContent"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "LiteMostActiveContent")
+})
 public class LiteMostActiveContentSearchBatchResultProcessor implements
     SolrSearchBatchResultProcessor {
 

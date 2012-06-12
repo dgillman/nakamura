@@ -52,7 +52,8 @@ import org.slf4j.LoggerFactory;
 @Service
 @Properties({
   @Property(name = "service.vendor", value = "The Sakai Foundation"),
-  @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "ActivityFeed")
+  @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "ActivityFeed"),
+  @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "ActivityFeed")
 })
 public class ActivityFeedSearchResultProcessor implements SolrSearchResultProcessor {
 

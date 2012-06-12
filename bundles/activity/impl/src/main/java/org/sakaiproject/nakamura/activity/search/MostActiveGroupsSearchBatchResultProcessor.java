@@ -55,7 +55,8 @@ import java.util.Map;
 @Component(immediate = true, label = "MostActiveGroupSearchBatchResultProcessor", description = "Formatter for most active groups")
 @Service
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.batchprocessor", value = "MostActiveGroups") })
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "MostActiveGroups"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "MostActiveGroups") })
 public class MostActiveGroupsSearchBatchResultProcessor implements
     SolrSearchBatchResultProcessor {
 

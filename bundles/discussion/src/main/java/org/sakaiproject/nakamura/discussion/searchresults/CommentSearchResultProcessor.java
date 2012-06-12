@@ -33,6 +33,7 @@ import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.presence.PresenceService;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -53,7 +54,10 @@ public class CommentSearchResultProcessor implements SolrSearchResultProcessor {
   static final String SERVICE_VENDOR = "service.vendor";
 
   @Property(value = "Comment")
-  static final String SEARCH_PROCESSOR = "sakai.search.processor";
+  static final String SEARCH_PROCESSOR = SolrSearchConstants.REG_PROCESSOR_NAMES;
+
+  @Property(value = "Comment")
+  static final String SEARCH_WRITER = SolrSearchConstants.REG_WRITER_NAMES;
 
   @Reference
   private PresenceService presenceService;

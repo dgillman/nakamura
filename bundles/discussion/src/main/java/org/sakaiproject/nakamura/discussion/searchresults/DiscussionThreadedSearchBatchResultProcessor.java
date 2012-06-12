@@ -37,6 +37,7 @@ import org.sakaiproject.nakamura.api.presence.PresenceService;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
@@ -69,7 +70,10 @@ public class DiscussionThreadedSearchBatchResultProcessor implements
   static final String SERVICE_VENDOR = "service.vendor";
 
   @Property(value = "DiscussionThreaded")
-  static final String SEARCH_BATCHPROCESSOR = "sakai.search.batchprocessor";
+  static final String SEARCH_BATCHPROCESSOR = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES;
+
+  @Property(value = "DiscussionThreaded")
+  static final String SEARCH_BATCHWRITER = SolrSearchConstants.REG_BATCH_WRITER_NAMES;
 
   @Reference
   PresenceService presenceService;

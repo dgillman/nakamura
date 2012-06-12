@@ -30,6 +30,7 @@ import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.io.JSONWriter;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
@@ -44,9 +45,11 @@ import java.util.Iterator;
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "Resource"),
-    @Property(name = SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP, boolValue = true)
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "Resource"),
+    @Property(name = SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP, boolValue = true),
+    @Property(name = SolrSearchBatchJsonResultWriter.DEFAULT_BATCH_WRITER_PROP, boolValue = true)
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
+@Service
 public class DefaultSearchBatchResultProcessor implements
     SolrSearchBatchResultProcessor {
 

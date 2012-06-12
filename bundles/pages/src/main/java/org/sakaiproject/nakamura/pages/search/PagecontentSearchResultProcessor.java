@@ -33,10 +33,10 @@ import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -52,12 +52,13 @@ import org.sakaiproject.nakamura.util.PathUtils;
 @Service
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SearchConstants.REG_PROCESSOR_NAMES, value = "Pagecontent"),
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "Pagecontent"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "Pagecontent"),
     @Property(name = "sakai.search.resourcetype", value = "sakai/pagecontent")
 })
 public class PagecontentSearchResultProcessor implements SolrSearchResultProcessor {
 
-  private static final String DEFAULT_SEARCH_PROC_TARGET = "(&(" + SearchConstants.REG_PROCESSOR_NAMES + "=Resource))";
+  private static final String DEFAULT_SEARCH_PROC_TARGET = "(&(" + SolrSearchConstants.REG_PROCESSOR_NAMES + "=Resource))";
   @Reference(target = DEFAULT_SEARCH_PROC_TARGET)
   private SolrSearchResultProcessor searchResultProcessor;
 

@@ -37,6 +37,7 @@ import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -52,7 +53,8 @@ import org.slf4j.LoggerFactory;
  */
 @Component(description = "Formatter for connection search results", label = "ConnectionFinderSearchResultProcessor")
 @Properties({ @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.processor", value = "ConnectionFinder") })
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "ConnectionFinder"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "ConnectionFinder") })
 @Service
 public class ConnectionFinderSearchResultProcessor implements SolrSearchResultProcessor {
 

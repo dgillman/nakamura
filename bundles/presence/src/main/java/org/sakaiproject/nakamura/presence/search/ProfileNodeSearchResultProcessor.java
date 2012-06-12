@@ -35,9 +35,9 @@ import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.presence.PresenceService;
 import org.sakaiproject.nakamura.api.presence.PresenceUtils;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -61,7 +61,8 @@ import java.util.Map;
 @Service
 @Properties({
   @Property(name = Constants.SERVICE_VENDOR, value = "The Sakai Foundation"),
-  @Property(name = SearchConstants.REG_PROCESSOR_NAMES, value = "Profile")
+  @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "Profile"),
+  @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "Profile")
 })
 public class ProfileNodeSearchResultProcessor implements SolrSearchResultProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(ProfileNodeSearchResultProcessor.class);

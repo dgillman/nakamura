@@ -37,6 +37,7 @@ import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -51,7 +52,9 @@ import java.util.Date;
 @Component(label = "GroupJoinRequestSearchResultProcessor", description = "Formatter for group join request search results.")
 @Properties({
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = "sakai.search.processor", value = "GroupJoinRequest") })
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "GroupJoinRequest"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "GroupJoinRequest")
+})
 @Service
 public class GroupJoinRequestSearchResultProcessor implements SolrSearchResultProcessor {
 

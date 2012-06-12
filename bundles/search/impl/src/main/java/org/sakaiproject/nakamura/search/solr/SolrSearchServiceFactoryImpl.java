@@ -27,14 +27,19 @@ import org.apache.felix.scr.annotations.ReferencePolicy;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.commons.osgi.PropertiesUtil;
+import org.sakaiproject.nakamura.api.lite.Session;
+import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.ResultSetFactory;
+import org.sakaiproject.nakamura.api.search.solr.SolrQueryFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
@@ -76,5 +81,20 @@ public class SolrSearchServiceFactoryImpl implements SolrSearchServiceFactory {
   public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request,
       Query query) throws SolrSearchException {
     return getSearchResultSet(request, query, false);
+  }
+
+  @Override
+  public SolrSearchResultSet getSearchResultSet(SolrQueryFactory queryFactory, long offset, long size,
+     Session session, Authorizable authorizable) throws SolrSearchException {
+    try {
+      Query query = queryFactory.getQuery();
+      ResultSetFactory factory = resultSetFactories.get(query.getQueryString());
+
+      return factory.processQuery(session, query, authorizable, offset, size);
+    } catch (SolrSearchException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new SolrSearchException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+    }
   }
 }

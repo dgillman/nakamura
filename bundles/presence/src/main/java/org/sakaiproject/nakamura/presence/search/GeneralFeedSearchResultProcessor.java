@@ -61,7 +61,8 @@ import javax.jcr.RepositoryException;
 @Service
 @Properties({
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "GeneralFeed")
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "GeneralFeed"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "GeneralFeed")
 })
 public class GeneralFeedSearchResultProcessor implements SolrSearchBatchResultProcessor {
 

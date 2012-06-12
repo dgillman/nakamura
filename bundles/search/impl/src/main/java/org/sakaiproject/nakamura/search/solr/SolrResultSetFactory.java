@@ -65,6 +65,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.List;
 
+import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_ITEMS_PER_PAGE;
+import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_PAGE;
+
 /**
  *
  */
@@ -73,6 +76,7 @@ import java.util.List;
 @Property(name = "type", value = Query.SOLR)
 
 public class SolrResultSetFactory implements ResultSetFactory {
+
   @Property(longValue = 100L)
   private static final String VERY_SLOW_QUERY_TIME = "verySlowQueryTime";
   @Property(longValue = 10L)
@@ -108,111 +112,131 @@ public class SolrResultSetFactory implements ResultSetFactory {
     queryMethod = METHOD.valueOf(PropertiesUtil.toString(props.get(HTTP_METHOD), "POST"));
   }
 
+  protected Map<String, Object> processQueryOptions (final Session session, final Authorizable authz,
+     final Query query) throws StorageClientException {
+
+    // Add reader restrictions to solr fq (filter query) parameter,
+    // to prevent "reader restrictions" from affecting the solr score
+    // of a document.
+    Map<String, Object> originalQueryOptions = query.getOptions();
+    Map<String, Object> queryOptions = Maps.newHashMap();
+
+    Object existingFilterQuery = null;
+
+    if (originalQueryOptions != null) {
+      // copy from originalQueryOptions in case its backed by a ImmutableMap,
+      // which prevents saving of filter query changes.
+      queryOptions.putAll(originalQueryOptions);
+      if (queryOptions.get(CommonParams.FQ) != null) {
+        existingFilterQuery = queryOptions.get(CommonParams.FQ);
+      }
+    }
+
+    Set<String> filterQueries = Sets.newHashSet();
+    // add any existing filter queries to the set
+    if (existingFilterQuery != null) {
+      if (existingFilterQuery instanceof Object[]) {
+        CollectionUtils.addAll(filterQueries, (Object[]) existingFilterQuery);
+      } else if (existingFilterQuery instanceof Iterable) {
+        CollectionUtils.addAll(filterQueries, ((Iterable) existingFilterQuery).iterator());
+      } else {
+        filterQueries.add(String.valueOf(existingFilterQuery));
+      }
+    }
+
+    // apply readers restrictions.
+    if (authz == null) {
+      filterQueries.add("readers:" + User.ANON_USER);
+    } else {
+      if (!User.ADMIN_USER.equals(authz.getId())) {
+        AuthorizableManager am = session.getAuthorizableManager();
+        Set<String> readers = Sets.newHashSet();
+        for (Iterator<Group> gi = authz.memberOf(am); gi.hasNext();) {
+          readers.add(gi.next().getId());
+        }
+        readers.add(session.getUserId());
+        filterQueries.add("readers:(" + StringUtils.join(readers," OR ") + ")");
+      }
+    }
+
+    // filter out 'excluded' items. these are indexed because we do need to search for
+    // some things on the server that the UI doesn't want (e.g. collection groups)
+    filterQueries.add("-exclude:true");
+
+    // filter out deleted items
+    List<String> deletedPaths = deletedPathsService.getDeletedPaths();
+    if (!deletedPaths.isEmpty()) {
+      // these are escaped as they are collected
+      filterQueries.add("-path:(" + StringUtils.join(deletedPaths, " OR ") + ")");
+    }
+
+    // save filterQuery changes
+    queryOptions.put(CommonParams.FQ, filterQueries);
+
+    // Ensure proper totals from grouped / collapsed queries.
+    if ("true".equals(queryOptions.get(GroupParams.GROUP)) &&
+        (queryOptions.get(GroupParams.GROUP_TOTAL_COUNT) == null)) {
+      queryOptions.put(GroupParams.GROUP_TOTAL_COUNT, "true");
+    }
+
+    return queryOptions;
+  }
+
+  protected SolrSearchResultSet executeQuery(final long offset, final long size, final String queryStr,
+     final Map<String, Object> queryOptions, final String telemetryStr) throws SolrServerException {
+    SolrQuery solrQuery = buildQuery(offset, size, queryStr, queryOptions);
+
+    final SolrServer solrServer = solrSearchService.getServer();
+    if ( LOGGER.isDebugEnabled()) {
+      try {
+        LOGGER.debug("Performing Query {} ", URLDecoder.decode(solrQuery.toString(),"UTF-8"));
+      } catch (UnsupportedEncodingException e) {
+      }
+    }
+    long tquery = System.currentTimeMillis();
+    final QueryResponse response = solrServer.query(solrQuery, queryMethod);
+    tquery = System.currentTimeMillis() - tquery;
+    try {
+      if ( tquery > verySlowQueryThreshold ) {
+        SLOW_QUERY_LOGGER.error("Very slow solr query {} ms {} ",tquery, URLDecoder.decode(solrQuery.toString(),"UTF-8"));
+        TelemetryCounter.incrementValue("search","VERYSLOW",telemetryStr);
+      } else if ( tquery > slowQueryThreshold ) {
+        SLOW_QUERY_LOGGER.warn("Slow solr query {} ms {} ",tquery, URLDecoder.decode(solrQuery.toString(),"UTF-8"));
+        TelemetryCounter.incrementValue("search", "SLOW", telemetryStr);
+      }
+    } catch (UnsupportedEncodingException e) {
+    }
+    final SolrSearchResultSetImpl rs = new SolrSearchResultSetImpl(response);
+    if ( LOGGER.isDebugEnabled()) {
+      LOGGER.debug("Got {} hits in {} ms", rs.getSize(), response.getElapsedTime());
+    }
+    return rs;
+  }
+
   /**
    * Process a query string to search using Solr.
    *
    * @param request
    * @param query
    * @param asAnon
-   * @param rs
    * @return
    * @throws SolrSearchException
    */
   @SuppressWarnings("rawtypes")
-  public SolrSearchResultSet processQuery(SlingHttpServletRequest request, Query query,
+  public SolrSearchResultSet processQuery(SlingHttpServletRequest request,  Query query,
       boolean asAnon) throws SolrSearchException {
     try {
-      // Add reader restrictions to solr fq (filter query) parameter,
-      // to prevent "reader restrictions" from affecting the solr score
-      // of a document.
-      Map<String, Object> originalQueryOptions = query.getOptions();
-      Map<String, Object> queryOptions = Maps.newHashMap();
-      Object filterQuery = null;
+      Session session = StorageClientUtils.adaptToSession(request.getResourceResolver().adaptTo(javax.jcr.Session.class));
+      AuthorizableManager am = session.getAuthorizableManager();
+      Authorizable authz = am.findAuthorizable(request.getRemoteUser());
 
-      if (originalQueryOptions != null) {
-        // copy from originalQueryOptions in case its backed by a ImmutableMap,
-        // which prevents saving of filter query changes.
-        queryOptions.putAll(originalQueryOptions);
-        if (queryOptions.get(CommonParams.FQ) != null) {
-          filterQuery = queryOptions.get(CommonParams.FQ);
-        }
-      }
+      Map<String, Object> queryOptions = processQueryOptions(session, authz, query);
 
-      Set<String> filterQueries = Sets.newHashSet();
-      // add any existing filter queries to the set
-      if (filterQuery != null) {
-        if (filterQuery instanceof Object[]) {
-          CollectionUtils.addAll(filterQueries, (Object[]) filterQuery);
-        } else if (filterQuery instanceof Iterable) {
-          CollectionUtils.addAll(filterQueries, ((Iterable) filterQuery).iterator());
-        } else {
-          filterQueries.add(String.valueOf(filterQuery));
-        }
-      }
+      long[] ranges = SolrSearchUtil.getOffsetAndSize(request, queryOptions);
 
-      // apply readers restrictions.
-      if (asAnon) {
-        filterQueries.add("readers:" + User.ANON_USER);
-      } else {
-        Session session = StorageClientUtils.adaptToSession(request.getResourceResolver().adaptTo(javax.jcr.Session.class));
-        if (!User.ADMIN_USER.equals(session.getUserId())) {
-          AuthorizableManager am = session.getAuthorizableManager();
-          Authorizable user = am.findAuthorizable(session.getUserId());
-          Set<String> readers = Sets.newHashSet();
-          for (Iterator<Group> gi = user.memberOf(am); gi.hasNext();) {
-            readers.add(gi.next().getId());
-          }
-          readers.add(session.getUserId());
-          filterQueries.add("readers:(" + StringUtils.join(readers," OR ") + ")");
-        }
-      }
+      String telemetryString = request.getResource().getPath();
 
-      // filter out 'excluded' items. these are indexed because we do need to search for
-      // some things on the server that the UI doesn't want (e.g. collection groups)
-      filterQueries.add("-exclude:true");
-
-      // filter out deleted items
-      List<String> deletedPaths = deletedPathsService.getDeletedPaths();
-      if (!deletedPaths.isEmpty()) {
-        // these are escaped as they are collected
-        filterQueries.add("-path:(" + StringUtils.join(deletedPaths, " OR ") + ")");
-      }
-      // save filterQuery changes
-      queryOptions.put(CommonParams.FQ, filterQueries);
-
-      // Ensure proper totals from grouped / collapsed queries.
-      if ("true".equals(queryOptions.get(GroupParams.GROUP)) &&
-          (queryOptions.get(GroupParams.GROUP_TOTAL_COUNT) == null)) {
-        queryOptions.put(GroupParams.GROUP_TOTAL_COUNT, "true");
-      }
-
-      SolrQuery solrQuery = buildQuery(request, query.getQueryString(), queryOptions);
-
-      SolrServer solrServer = solrSearchService.getServer();
-      if ( LOGGER.isDebugEnabled()) {
-        try {
-          LOGGER.debug("Performing Query {} ", URLDecoder.decode(solrQuery.toString(),"UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-        }
-      }
-      long tquery = System.currentTimeMillis();
-      QueryResponse response = solrServer.query(solrQuery, queryMethod);
-      tquery = System.currentTimeMillis() - tquery;
-      try {
-        if ( tquery > verySlowQueryThreshold ) {
-          SLOW_QUERY_LOGGER.error("Very slow solr query {} ms {} ",tquery, URLDecoder.decode(solrQuery.toString(),"UTF-8"));
-          TelemetryCounter.incrementValue("search","VERYSLOW",request.getResource().getPath());
-        } else if ( tquery > slowQueryThreshold ) {
-          SLOW_QUERY_LOGGER.warn("Slow solr query {} ms {} ",tquery, URLDecoder.decode(solrQuery.toString(),"UTF-8"));
-          TelemetryCounter.incrementValue("search", "SLOW", request.getResource().getPath());
-        }
-      } catch (UnsupportedEncodingException e) {
-      }
-      SolrSearchResultSetImpl rs = new SolrSearchResultSetImpl(response);
-      if ( LOGGER.isDebugEnabled()) {
-        LOGGER.debug("Got {} hits in {} ms", rs.getSize(), response.getElapsedTime());
-      }
-      return rs;
+      return executeQuery(ranges[0], ranges[1], query.getQueryString(), queryOptions, telemetryString);
     } catch (StorageClientException e) {
       throw new SolrSearchException(500, e.getMessage());
     } catch (AccessDeniedException e) {
@@ -222,20 +246,39 @@ public class SolrResultSetFactory implements ResultSetFactory {
     }
   }
 
+  @Override
+  public SolrSearchResultSet processQuery(final Session session, final Query query, final Authorizable authorizable,
+     final long offset, final long size) throws SolrSearchException {
+
+    try {
+      final Map<String, Object> queryOptions = processQueryOptions(session, authorizable, query);
+
+      long finalOffset = queryOptions.containsKey(PARAMS_PAGE) ? (Long)queryOptions.get(PARAMS_PAGE) : offset;
+      long finalSize = queryOptions.containsKey(PARAMS_ITEMS_PER_PAGE) ?
+         (Long)queryOptions.get(PARAMS_ITEMS_PER_PAGE) : offset;
+
+      return executeQuery(finalOffset, finalSize, query.getQueryString(), queryOptions, query.getName());
+    } catch (StorageClientException e) {
+      throw new SolrSearchException(500, e.getMessage());
+    } catch (SolrServerException e) {
+      throw new SolrSearchException(500, e.getMessage());
+    }
+  }
+
   /**
-   * @param request
-   * @param query
+   * @param offset
+   * @param size
    * @param queryString
+   * @param options
    * @return
    */
   @SuppressWarnings("unchecked")
-  private SolrQuery buildQuery(SlingHttpServletRequest request, String queryString,
+  private SolrQuery buildQuery(long offset, long size, String queryString,
       Map<String, Object> options) {
     // build the query
     SolrQuery solrQuery = new SolrQuery(queryString);
-    long[] ranges = SolrSearchUtil.getOffsetAndSize(request, options);
-    solrQuery.setStart((int) ranges[0]);
-    solrQuery.setRows(Math.min(defaultMaxResults, (int) ranges[1]));
+    solrQuery.setStart((int) offset);
+    solrQuery.setRows(Math.min(defaultMaxResults, (int) size));
 
     // add in some options
     if (options != null) {
@@ -261,7 +304,6 @@ public class SolrResultSetFactory implements ResultSetFactory {
   }
 
   /**
-   * @param options
    * @param solrQuery
    * @param val
    */

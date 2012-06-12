@@ -33,6 +33,7 @@ import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
@@ -49,7 +50,10 @@ import org.slf4j.LoggerFactory;
 @Component(immediate = true, metatype = true)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "Resource"),
-    @Property(name = SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP, boolValue = true) })
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "Resource"),
+    @Property(name = SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP, boolValue = true),
+    @Property(name = SolrSearchJsonResultWriter.DEFAULT_WRITER_PROP, boolValue = true)
+})
 @Service
 public class DefaultSearchResultProcessor implements SolrSearchResultProcessor {
 

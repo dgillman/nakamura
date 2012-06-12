@@ -48,7 +48,9 @@ import org.slf4j.LoggerFactory;
 @Component
 @Service
 @Properties({ @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "Calendar") })
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "Calendar"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "Calendar")
+})
 public class CalendarSearchResultProcessor implements SolrSearchResultProcessor {
   private static final Logger LOGGER = LoggerFactory
       .getLogger(CalendarSearchResultProcessor.class);
