@@ -3,7 +3,6 @@ package org.sakaiproject.nakamura.search.solr;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.commons.lang.StringUtils;
-import org.apache.felix.scr.annotations.Reference;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.request.RequestParameter;
 import org.apache.sling.api.request.RequestParameterMap;
@@ -37,18 +36,18 @@ import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SEAR
 
 public class BackwardCompatibleSolrQueryFactory implements SolrQueryFactory {
 
-  @Reference
-  private transient TemplateService templateService;
-
-  @Reference
-  private SolrSearchPropertyProviderTracker searchPropertyProviderTracker;
-
   private static final Logger LOGGER = LoggerFactory.getLogger(BackwardCompatibleSolrQueryFactory.class);
 
+  private TemplateService templateService;
+  private SolrSearchPropertyProviderTracker searchPropertyProviderTracker;
   private SlingHttpServletRequest request;
   private SearchTemplate template;
 
-  public BackwardCompatibleSolrQueryFactory(SlingHttpServletRequest request, SearchTemplate template) {
+  public BackwardCompatibleSolrQueryFactory(TemplateService templateService,
+     SolrSearchPropertyProviderTracker propertyProviderTracker, SlingHttpServletRequest request,
+     SearchTemplate template) {
+    this.templateService = templateService;
+    this.searchPropertyProviderTracker = propertyProviderTracker;
     this.request = request;
     this.template = template;
   }
@@ -87,7 +86,7 @@ public class BackwardCompatibleSolrQueryFactory implements SolrQueryFactory {
       query.getOptions().put(PARAMS_PAGE, Long.toString(page));
     }
 
-    return null;
+    return query;
   }
 
     /**
@@ -159,15 +158,22 @@ public class BackwardCompatibleSolrQueryFactory implements SolrQueryFactory {
         String key = entry.getKey();
         String[] values = entry.getValue();
 
-        Set<String> processedVals = Sets.newHashSet();
+        if (values.length > 1) {
+          Set<String> processedVals = Sets.newHashSet();
 
-        for (String value : values) {
-          String processedVal = processValue(key, value, propertiesMap,
-              queryType, missingTerms);
-          processedVals.add(processedVal);
-        }
-        if (!processedVals.isEmpty()) {
-          options.put(key, processedVals);
+          for (String value : values) {
+            String processedVal = processValue(key, value, propertiesMap,
+                queryType, missingTerms);
+            processedVals.add(processedVal);
+          }
+          if (!processedVals.isEmpty()) {
+            options.put(key, processedVals);
+          }
+        } else {
+          String val = values[0];
+            String processedVal = processValue(key, val, propertiesMap, queryType,
+                missingTerms);
+            options.put(key, processedVal);
         }
       }
     }

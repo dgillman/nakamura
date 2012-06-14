@@ -253,9 +253,10 @@ public class SolrResultSetFactory implements ResultSetFactory {
     try {
       final Map<String, Object> queryOptions = processQueryOptions(session, authorizable, query);
 
-      long finalOffset = queryOptions.containsKey(PARAMS_PAGE) ? (Long)queryOptions.get(PARAMS_PAGE) : offset;
+      long finalOffset = queryOptions.containsKey(PARAMS_PAGE) ? Long.parseLong((String)queryOptions.get(PARAMS_PAGE))
+         : offset;
       long finalSize = queryOptions.containsKey(PARAMS_ITEMS_PER_PAGE) ?
-         (Long)queryOptions.get(PARAMS_ITEMS_PER_PAGE) : offset;
+         Long.parseLong((String)queryOptions.get(PARAMS_ITEMS_PER_PAGE)) : offset;
 
       return executeQuery(finalOffset, finalSize, query.getQueryString(), queryOptions, query.getName());
     } catch (StorageClientException e) {
@@ -286,7 +287,7 @@ public class SolrResultSetFactory implements ResultSetFactory {
         String key = option.getKey();
         Object val = option.getValue();
         if (CommonParams.SORT.equals(key)) {
-          parseSort(solrQuery, String.valueOf(val));
+          parseSort(solrQuery, (String)val);
         } else if (val instanceof Object[]) {
           for (Object v : (Object[]) val) {
             solrQuery.add(key, String.valueOf(v));

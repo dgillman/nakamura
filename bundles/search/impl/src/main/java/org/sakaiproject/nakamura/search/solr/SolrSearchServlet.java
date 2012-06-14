@@ -55,6 +55,7 @@ import org.sakaiproject.nakamura.api.search.solr.SolrSearchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
+import org.sakaiproject.nakamura.api.templates.TemplateService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.sakaiproject.nakamura.util.telemetry.TelemetryCounter;
 import org.slf4j.Logger;
@@ -126,6 +127,12 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   protected transient SolrSearchServiceFactory searchServiceFactory;
 
   @Reference
+  protected transient TemplateService templateService;
+
+  @Reference
+  protected transient SolrSearchPropertyProviderTracker searchPropertyProviderTracker;
+
+  @Reference
   private SearchResponseDecoratorTracker searchResponseDecoratorTracker;
 
   @Reference
@@ -175,7 +182,8 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
 
       final SearchTemplate template = new JcrSearchTemplate(node);
 
-      final BackwardCompatibleSolrQueryFactory bcsqf = new BackwardCompatibleSolrQueryFactory(request, template);
+      final BackwardCompatibleSolrQueryFactory bcsqf = new BackwardCompatibleSolrQueryFactory(templateService,
+         searchPropertyProviderTracker, request, template);
 
       long[] ranges = SolrSearchUtil.getOffsetAndSize(request, null);
 
@@ -188,19 +196,36 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
         return;
       }
 
-      SolrSearchBatchJsonResultWriter batchResultWriter = defaultJsonBatchWriter;
-      SolrSearchJsonResultWriter resultWriter = defaultJsonResultWriter;
+      SolrSearchBatchJsonResultWriter batchResultWriter = null;
+      SolrSearchJsonResultWriter resultWriter = null;
 
+      /*
+        The order of this processing is important - template.getBatchResultWriter and template.getResultWriter
+        may return the name of a request processor. This was to preserve backward compatibility: result writer
+        interfaces were refactored out of request processor interfaces. Rather than revise all existing templates
+        to add a result writer field, it has been assumed that a template lacking such a field predates the
+        refactor and so the request processor should be returned.
+
+        In order to catch a case where the lack of a result writer *is* indeed an error we need to check for
+        null when looking up the ResultWriter. At that point we try to handle the situation by falling back to
+        the default result writer.
+       */
       String temp = null;
       if (template.isBatch()) {
         temp = template.getBatchResultWriter();
         if (temp != null) {
           batchResultWriter = searchBatchResultWriterTracker.getByName(temp);
         }
+        if (batchResultWriter == null) {
+          batchResultWriter = defaultJsonBatchWriter;
+        }
       } else {
         temp = template.getResultWriter();
         if (temp != null) {
           resultWriter = searchResultWriterTracker.getByName(temp);
+        }
+        if (resultWriter == null) {
+          resultWriter = defaultJsonResultWriter;
         }
       }
 

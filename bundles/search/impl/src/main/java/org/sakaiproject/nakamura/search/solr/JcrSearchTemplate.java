@@ -14,6 +14,7 @@ import javax.jcr.Value;
 import java.util.Map;
 
 public class JcrSearchTemplate implements SearchTemplate {
+
   private boolean batch;
   private String[] propertyProviderNames;
   private Map<String, String> defaultValues;
@@ -40,6 +41,9 @@ public class JcrSearchTemplate implements SearchTemplate {
     resourceType = getStringProperty(queryNode, "sling:resourceType");
     batchResultProcessor = getStringProperty(queryNode, SAKAI_BATCHRESULTPROCESSOR);
     batchResultWriter = getStringProperty(queryNode, SAKAI_BATCHRESULTWRITER);
+    if (batchResultWriter == null && batchResultProcessor != null) {
+      batchResultWriter = batchResultProcessor;
+    }
     resultProcessor = getStringProperty(queryNode, SAKAI_RESULTPROCESSOR);
     resultWriter = getStringProperty(queryNode, SAKAI_RESULTWRITER);
 
@@ -123,16 +127,26 @@ public class JcrSearchTemplate implements SearchTemplate {
 
   @Override
   public String[] getPropertyProviderNames() {
+    if (propertyProviderNames == null) {
+      return new String[0];
+    }
     return propertyProviderNames;
   }
 
   @Override
   public Map<String, String> getDefaultValues() {
+    if (defaultValues == null) {
+      ImmutableMap.Builder<String, String> builder = new ImmutableMap.Builder<String, String>();
+      return builder.build();
+    }
     return defaultValues;
   }
 
   @Override
   public String[] getDecoratorNames() {
+    if (decoratorNames == null) {
+      return new String[0];
+    }
     return decoratorNames;
   }
 
@@ -148,6 +162,10 @@ public class JcrSearchTemplate implements SearchTemplate {
 
   @Override
   public Map<String, String[]> getQueryOptions() {
+    if (queryOptions == null) {
+      ImmutableMap.Builder<String, String[]> builder = new ImmutableMap.Builder<String, String[]>();
+      return builder.build();
+    }
     return queryOptions;
   }
 

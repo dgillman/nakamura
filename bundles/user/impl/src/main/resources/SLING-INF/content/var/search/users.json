@@ -13,6 +13,7 @@
   },
   "sakai:propertyprovider": "UsersSearchQueryHandler",
   "sakai:resultprocessor": "UsersSearchQueryHandler",
+  "sakai:resultwriter": "UsersSearchQueryHandler",
   "sakai:title": "Users",
   "sakai:shortDescription": "Get the profiles of select users.",
   "sakai:parameters" : [

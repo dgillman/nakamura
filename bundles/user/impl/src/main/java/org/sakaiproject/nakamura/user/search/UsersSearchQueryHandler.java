@@ -41,6 +41,7 @@ import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -50,7 +51,8 @@ import org.slf4j.LoggerFactory;
 @Component
 @Service({
     SolrSearchPropertyProvider.class,
-    SolrSearchResultProcessor.class
+    SolrSearchResultProcessor.class,
+    SolrSearchJsonResultWriter.class
 })
 @Properties({
     @Property(name = SearchConstants.REG_PROVIDER_NAMES, value="UsersSearchQueryHandler"),
