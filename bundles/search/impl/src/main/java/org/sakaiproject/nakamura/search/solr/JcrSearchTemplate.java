@@ -41,11 +41,17 @@ public class JcrSearchTemplate implements SearchTemplate {
     resourceType = getStringProperty(queryNode, "sling:resourceType");
     batchResultProcessor = getStringProperty(queryNode, SAKAI_BATCHRESULTPROCESSOR);
     batchResultWriter = getStringProperty(queryNode, SAKAI_BATCHRESULTWRITER);
+    resultProcessor = getStringProperty(queryNode, SAKAI_RESULTPROCESSOR);
+    resultWriter = getStringProperty(queryNode, SAKAI_RESULTWRITER);
+
+    // use the ResultProcessor name if the ResultWriter is not specified - this allows for backward
+    // compat. for stuff writen prior to refactoring ResultWriter interfaces out of ResultProcessor
     if (batchResultWriter == null && batchResultProcessor != null) {
       batchResultWriter = batchResultProcessor;
     }
-    resultProcessor = getStringProperty(queryNode, SAKAI_RESULTPROCESSOR);
-    resultWriter = getStringProperty(queryNode, SAKAI_RESULTWRITER);
+    if (resultWriter == null && resultProcessor != null) {
+      resultWriter = resultProcessor;
+    }
 
     batch = (batchResultProcessor != null && batchResultWriter != null);
 
