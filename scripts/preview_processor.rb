@@ -369,7 +369,7 @@ def main()
         end
 
         # Pass on the page_count
-        @s.execute_post @s.url_for("p/#{id}"), {"sakai:pagecount" => page_count, "sakai:hasPreview" => "true", "sakai:needsprocessing" => "false"}
+        @s.execute_post @s.url_for("p/#{id}"), {"sakai:pagecount" => page_count, "sakai:hasPreview" => "true"}
 
         # Change to the documents directory otherwise we won't find the next file.
         Dir.chdir DOCS_DIR
@@ -381,7 +381,6 @@ def main()
       @s.execute_post @s.url_for("p/#{id}"), {"sakai:processing_failed" => "true"}
     ensure
       # No matter what we flag the file as processed and delete the temp copied file.
-      # TODO ACAD-273 only mark if processed successfully
       @s.execute_post @s.url_for("p/#{id}"), {"sakai:needsprocessing" => "false"}
       FileUtils.rm_f DOCS_DIR + "/#{filename}"
     end
