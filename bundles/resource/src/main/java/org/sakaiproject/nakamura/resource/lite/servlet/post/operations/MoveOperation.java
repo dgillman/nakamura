@@ -28,7 +28,6 @@ import org.apache.sling.servlets.post.Modification;
 import org.sakaiproject.nakamura.api.lite.StorageClientException;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
-import org.sakaiproject.nakamura.api.resource.MoveCleaner;
 import org.sakaiproject.nakamura.api.resource.lite.AbstractSparsePostOperation;
 import org.sakaiproject.nakamura.api.resource.lite.SparsePostOperation;
 import org.sakaiproject.nakamura.api.resource.lite.SparsePostOperationService;
