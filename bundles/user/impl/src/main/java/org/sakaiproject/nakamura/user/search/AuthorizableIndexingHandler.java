@@ -73,7 +73,6 @@ import org.sakaiproject.nakamura.util.PathUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -344,5 +343,6 @@ public class AuthorizableIndexingHandler implements IndexingHandler {
       Map<String, Object> properties) {
     indexingWorkers.remove(worker);
   }
+
 
 }
