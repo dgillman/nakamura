@@ -37,6 +37,7 @@ import org.sakaiproject.nakamura.api.lite.content.ContentManager;
 import org.sakaiproject.nakamura.api.search.SearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 
 import java.util.Iterator;
@@ -48,7 +49,9 @@ import java.util.Iterator;
 @Service
 @Properties(value = {
     @Property(name = Constants.SERVICE_VENDOR, value = "The Sakai Foundation"),
-    @Property(name = SearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "MessageContacts")
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "MessageContacts"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "MessageContacts"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "MessageContacts")
 })
 public class MessageContactsSearchBatchResultProcessor extends MessageSearchResultProcessor
     implements SolrSearchBatchResultProcessor {
@@ -60,7 +63,6 @@ public class MessageContactsSearchBatchResultProcessor extends MessageSearchResu
    * Parses the message to a usable JSON format for the UI.
    *
    * @param write
-   * @param result
    * @throws JSONException
    */
   public void writeResults(SlingHttpServletRequest request, JSONWriter write,

@@ -58,8 +58,10 @@ import java.util.Set;
  */
 @Component(immediate = true, metatype = true)
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "LiteMeManagerFiles") })
-@Service(value = SolrSearchBatchResultProcessor.class)
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "LiteMeManagerFiles"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "LiteMeManagerFiles")
+})
+@Service
 public class LiteMeManagerFileSearchBatchResultProcessor implements SolrSearchBatchResultProcessor {
 
   public static final Logger LOGGER = LoggerFactory

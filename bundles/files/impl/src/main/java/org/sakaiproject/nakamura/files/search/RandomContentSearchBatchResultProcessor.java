@@ -54,7 +54,7 @@ import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARA
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "RandomContent")
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
+@Service
 public class RandomContentSearchBatchResultProcessor extends LiteFileSearchBatchResultProcessor {
 
 

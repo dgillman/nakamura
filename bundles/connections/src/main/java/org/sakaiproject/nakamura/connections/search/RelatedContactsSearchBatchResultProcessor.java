@@ -87,9 +87,10 @@ import java.util.Set;
  */
 @Component(immediate = true, metatype = true)
 @Properties(value = {
-    @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "RelatedContactsSearchBatchResultProcessor") })
-@Service(value = SolrSearchBatchResultProcessor.class)
+  @Property(name = "service.vendor", value = "The Sakai Foundation"),
+  @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "RelatedContactsSearchBatchResultProcessor"),
+  @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "RelatedContactsSearchBatchResultProcessor") })
+@Service
 public class RelatedContactsSearchBatchResultProcessor implements
     SolrSearchBatchResultProcessor {
 
