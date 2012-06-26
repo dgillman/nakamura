@@ -253,12 +253,7 @@ public class SolrResultSetFactory implements ResultSetFactory {
     try {
       final Map<String, Object> queryOptions = processQueryOptions(session, authorizable, query);
 
-      long finalOffset = queryOptions.containsKey(PARAMS_PAGE) ? Long.parseLong((String)queryOptions.get(PARAMS_PAGE))
-         : offset;
-      long finalSize = queryOptions.containsKey(PARAMS_ITEMS_PER_PAGE) ?
-         Long.parseLong((String)queryOptions.get(PARAMS_ITEMS_PER_PAGE)) : offset;
-
-      return executeQuery(finalOffset, finalSize, query.getQueryString(), queryOptions, query.getName());
+      return executeQuery(offset, size, query.getQueryString(), queryOptions, query.getName());
     } catch (StorageClientException e) {
       throw new SolrSearchException(500, e.getMessage());
     } catch (SolrServerException e) {

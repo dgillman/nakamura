@@ -36,10 +36,10 @@ import org.apache.sling.commons.json.io.JSONWriter;
 import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.GroupParams;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
@@ -55,8 +55,9 @@ import org.slf4j.LoggerFactory;
     SolrSearchJsonResultWriter.class
 })
 @Properties({
-    @Property(name = SearchConstants.REG_PROVIDER_NAMES, value="UsersSearchQueryHandler"),
-    @Property(name = SearchConstants.REG_PROCESSOR_NAMES, value = "UsersSearchQueryHandler")
+    @Property(name = SolrSearchConstants.REG_PROVIDER_NAMES, value="UsersSearchQueryHandler"),
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "UsersSearchQueryHandler"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "UsersSearchQueryHandler")
 })
 public class UsersSearchQueryHandler implements SolrSearchPropertyProvider, SolrSearchResultProcessor {
   private static final Logger LOGGER = LoggerFactory.getLogger(UsersSearchQueryHandler.class);
