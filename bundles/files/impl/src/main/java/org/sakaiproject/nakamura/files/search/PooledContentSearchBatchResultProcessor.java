@@ -57,9 +57,9 @@ import java.util.Iterator;
     @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "PooledContentFiles"),
     @Property(name = SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP, boolValue = true)
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
+@Service
 public class PooledContentSearchBatchResultProcessor implements
-SolrSearchBatchResultProcessor {
+   SolrSearchBatchResultProcessor {
 
   @Reference
   protected SolrSearchServiceFactory searchServiceFactory;

@@ -61,7 +61,7 @@ import java.util.Set;
     @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "LiteMeManagerFiles"),
     @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "LiteMeManagerFiles")
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
+@Service
 public class LiteMeManagerFileSearchBatchResultProcessor implements SolrSearchBatchResultProcessor {
 
   public static final Logger LOGGER = LoggerFactory

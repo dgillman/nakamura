@@ -49,7 +49,8 @@ import java.util.Iterator;
 @Properties(value = {
     @Property(name = Constants.SERVICE_VENDOR, value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "MessageContacts"),
-    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "MessageContacts")
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "MessageContacts"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "MessageContacts")
 })
 public class MessageContactsSearchBatchResultProcessor extends MessageSearchResultProcessor
     implements SolrSearchBatchResultProcessor {

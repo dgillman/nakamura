@@ -51,7 +51,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 @Component(immediate = true, metatype = true)
-@Service(value = SolrSearchResultProcessor.class)
+@Service
 @Properties(value = { @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name =  SolrSearchConstants.REG_PROCESSOR_NAMES, value = "AllActivities"),
     @Property(name =  SolrSearchConstants.REG_WRITER_NAMES, value = "AllActivities")

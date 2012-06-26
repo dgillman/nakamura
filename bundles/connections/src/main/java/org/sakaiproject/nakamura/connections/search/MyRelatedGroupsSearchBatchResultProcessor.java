@@ -80,7 +80,7 @@ import javax.jcr.RepositoryException;
   @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "MyRelatedGroupsSearchBatchResultProcessor"),
   @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "MyRelatedGroupsSearchBatchResultProcessor")
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
+@Service
 public class MyRelatedGroupsSearchBatchResultProcessor implements
     SolrSearchBatchResultProcessor {
 
