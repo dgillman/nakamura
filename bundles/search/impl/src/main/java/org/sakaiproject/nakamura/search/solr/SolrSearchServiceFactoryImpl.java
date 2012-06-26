@@ -87,7 +87,7 @@ public class SolrSearchServiceFactoryImpl implements SolrSearchServiceFactory {
      Session session, Authorizable authorizable) throws SolrSearchException {
     try {
       Query query = queryFactory.getQuery();
-      ResultSetFactory factory = resultSetFactories.get(query.getQueryString());
+      ResultSetFactory factory = resultSetFactories.get(query.getType());
 
       return factory.processQuery(session, query, authorizable, offset, numRecords);
     } catch (SolrSearchException e) {

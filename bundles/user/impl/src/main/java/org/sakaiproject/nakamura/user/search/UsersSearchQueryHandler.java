@@ -29,10 +29,10 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.io.JSONWriter;
 import org.apache.solr.common.params.GroupParams;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.DomainObjectSearchQueryHandler;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
@@ -41,13 +41,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component
-@Service({
-    SolrSearchPropertyProvider.class,
-    SolrSearchResultProcessor.class
-})
+@Service
 @Properties({
-    @Property(name = SearchConstants.REG_PROVIDER_NAMES, value="UsersSearchQueryHandler"),
-    @Property(name = SearchConstants.REG_PROCESSOR_NAMES, value = "UsersSearchQueryHandler")
+    @Property(name = SolrSearchConstants.REG_PROVIDER_NAMES, value="UsersSearchQueryHandler"),
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "UsersSearchQueryHandler"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "UsersSearchQueryHandler")
 })
 public class UsersSearchQueryHandler extends DomainObjectSearchQueryHandler
     implements SolrSearchPropertyProvider, SolrSearchResultProcessor {

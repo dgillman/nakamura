@@ -36,11 +36,11 @@ import org.sakaiproject.nakamura.api.lite.StorageClientException;
 import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.lite.content.Content;
-import org.sakaiproject.nakamura.api.search.SearchConstants;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.DomainObjectSearchQueryHandler;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
@@ -51,13 +51,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Component
-@Service({
-    SolrSearchPropertyProvider.class,
-    SolrSearchResultProcessor.class
-})
+@Service
 @Properties({
-    @Property(name = SearchConstants.REG_PROVIDER_NAMES, value="ContentSearchQueryHandler"),
-    @Property(name = SearchConstants.REG_PROCESSOR_NAMES, value = "ContentSearchQueryHandler")
+    @Property(name = SolrSearchConstants.REG_PROVIDER_NAMES, value="ContentSearchQueryHandler"),
+    @Property(name = SolrSearchConstants.REG_PROCESSOR_NAMES, value = "ContentSearchQueryHandler"),
+    @Property(name = SolrSearchConstants.REG_WRITER_NAMES, value = "ContentSearchQueryHandler")
 })
 public class ContentSearchQueryHandler extends DomainObjectSearchQueryHandler
     implements SolrSearchPropertyProvider, SolrSearchResultProcessor {

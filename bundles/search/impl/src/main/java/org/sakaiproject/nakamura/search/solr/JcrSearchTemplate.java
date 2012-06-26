@@ -60,6 +60,15 @@ public class JcrSearchTemplate implements SearchTemplate {
     resultProcessor = getStringProperty(queryNode, SAKAI_RESULTPROCESSOR);
     resultWriter = getStringProperty(queryNode, SAKAI_RESULTWRITER);
 
+    // use the ResultProcessor name if the ResultWriter is not specified - this allows for backward
+    // compat. for stuff writen prior to refactoring ResultWriter interfaces out of ResultProcessor
+    if (batchResultWriter == null && batchResultProcessor != null) {
+      batchResultWriter = batchResultProcessor;
+    }
+    if (resultWriter == null && resultProcessor != null) {
+      resultWriter = resultProcessor;
+    }
+
     batch = batchResultProcessor != null;
 
     if (queryNode.hasNode(SAKAI_QUERY_TEMPLATE_DEFAULTS)) {
@@ -140,16 +149,26 @@ public class JcrSearchTemplate implements SearchTemplate {
 
   @Override
   public String[] getPropertyProviderNames() {
+    if (propertyProviderNames == null) {
+      return new String[0];
+    }
     return propertyProviderNames;
   }
 
   @Override
   public Map<String, String> getDefaultValues() {
+    if (defaultValues == null) {
+      ImmutableMap.Builder<String, String> builder = new ImmutableMap.Builder<String, String>();
+      return builder.build();
+    }
     return defaultValues;
   }
 
   @Override
   public String[] getDecoratorNames() {
+    if (decoratorNames == null) {
+      return new String[0];
+    }
     return decoratorNames;
   }
 
@@ -165,6 +184,10 @@ public class JcrSearchTemplate implements SearchTemplate {
 
   @Override
   public Map<String, String[]> getQueryOptions() {
+    if (queryOptions == null) {
+      ImmutableMap.Builder<String, String[]> builder = new ImmutableMap.Builder<String, String[]>();
+      return builder.build();
+    }
     return queryOptions;
   }
 

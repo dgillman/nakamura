@@ -54,9 +54,10 @@ import javax.jcr.RepositoryException;
 @Component(immediate = true, metatype=true)
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "FullResource")
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "FullResource"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "FullResource")
 })
-@Service(value = SolrSearchBatchResultProcessor.class)
+@Service
 public class DefaultResourceSearchBatchResultProcessor implements
     SolrSearchBatchResultProcessor {
 

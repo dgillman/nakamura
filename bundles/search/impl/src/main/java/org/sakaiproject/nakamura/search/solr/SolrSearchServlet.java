@@ -27,6 +27,7 @@ import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKA
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_RESULTPROCESSOR;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_SEARCHRESPONSEDECORATOR;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SEARCH_PATH_PREFIX;
+import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.TIDY;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.TOTAL;
 
 import com.google.common.collect.Maps;
@@ -41,6 +42,7 @@ import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestParameter;
 import org.apache.sling.api.request.RequestParameterMap;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.solr.client.solrj.response.FacetField;
@@ -49,8 +51,11 @@ import org.sakaiproject.nakamura.api.doc.ServiceDocumentation;
 import org.sakaiproject.nakamura.api.doc.ServiceMethod;
 import org.sakaiproject.nakamura.api.doc.ServiceParameter;
 import org.sakaiproject.nakamura.api.doc.ServiceResponse;
+import org.sakaiproject.nakamura.api.lite.Session;
 import org.sakaiproject.nakamura.api.lite.StorageClientException;
+import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
+import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 import org.sakaiproject.nakamura.api.search.SearchResponseDecorator;
 import org.sakaiproject.nakamura.api.search.SearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
@@ -58,6 +63,8 @@ import org.sakaiproject.nakamura.api.search.solr.MissingParameterException;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SearchServiceException;
+import org.sakaiproject.nakamura.api.search.solr.SearchTemplate;
+import org.sakaiproject.nakamura.api.search.solr.SolrQueryFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
@@ -65,12 +72,14 @@ import org.sakaiproject.nakamura.api.search.solr.SolrSearchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.sakaiproject.nakamura.api.templates.TemplateService;
 import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.sakaiproject.nakamura.util.JcrUtils;
 import org.sakaiproject.nakamura.util.LitePersonalUtils;
 import org.sakaiproject.nakamura.util.ServletUtils;
+import org.sakaiproject.nakamura.util.telemetry.TelemetryCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,6 +151,9 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   private static final Logger LOGGER = LoggerFactory.getLogger(SolrSearchServlet.class);
 
   @Reference
+  protected transient SolrSearchServiceFactory searchServiceFactory;
+
+  @Reference
   private SearchResultProcessorTracker searchResultProcessorTracker;
 
   @Reference
@@ -201,14 +213,220 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   @Reference
   private transient TemplateService templateService;
 
-  protected Query getQuery(final SlingHttpServletRequest request, final JcrSearchTemplate template)
-     throws RepositoryException, JSONException, StorageClientException, AccessDeniedException {
-    Resource resource = request.getResource();
-    if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
-      throw new IllegalStateException("unable to obtain Node from request");
+  class BackwardCompatibleSolrQueryFactory implements SolrQueryFactory {
+    private final Logger LOGGER = LoggerFactory.getLogger(BackwardCompatibleSolrQueryFactory.class);
+
+    private TemplateService templateService;
+    private SolrSearchPropertyProviderTracker searchPropertyProviderTracker;
+    private SlingHttpServletRequest request;
+    private SearchTemplate template;
+
+    public BackwardCompatibleSolrQueryFactory(TemplateService templateService,
+       SolrSearchPropertyProviderTracker propertyProviderTracker, SlingHttpServletRequest request,
+       SearchTemplate template) {
+      this.templateService = templateService;
+      this.searchPropertyProviderTracker = propertyProviderTracker;
+      this.request = request;
+      this.template = template;
     }
-    Node node = resource.adaptTo(Node.class);
-    if (node != null && node.hasProperty(SAKAI_QUERY_TEMPLATE)) {
+    /**
+     * Processes a velocity template so that variable references are replaced by the same
+     * properties in the property provider and request.
+     *
+     * @param request
+     *          the request.
+     * @param template
+     *          the query template.
+     * @return A processed query template
+     * @throws MissingParameterException
+     */
+    protected Query processQuery(SlingHttpServletRequest request, SearchTemplate template)
+       throws RepositoryException, MissingParameterException, JSONException, StorageClientException,
+       AccessDeniedException {
+      // check the resource type and set the query type appropriately
+      // default to using solr for queries
+      final String resourceType = template.getResourceType();
+      String queryType;
+      if ("sakai/sparse-search".equals(resourceType)) {
+        queryType = Query.SPARSE;
+      } else {
+        queryType = Query.SOLR;
+      }
+
+      String[] propertyProviderNames = template.getPropertyProviderNames();
+      Map<String, String> defaultValues = template.getDefaultValues();
+      Map<String, String> propertiesMap = loadProperties(request.getRemoteUser(), propertyProviderNames,
+          defaultValues, queryType);
+
+      // load in properties from the request
+      RequestParameterMap params = request.getRequestParameterMap();
+      for (Entry<String, RequestParameter[]> entry : params.entrySet()) {
+        RequestParameter[] vals = entry.getValue();
+        String requestValue = vals[0].getString();
+
+        // blank values aren't cool
+        if (StringUtils.isBlank(requestValue)) {
+          continue;
+        }
+
+        // we're selective with what we escape to make sure we don't hinder
+        // search functionality
+        String key = entry.getKey();
+        String val = SearchUtil.escapeString(requestValue, queryType);
+        propertiesMap.put(key, val);
+      }
+
+      if (propertyProviderNames != null) {
+        for (String propertyProviderName : propertyProviderNames) {
+          LOGGER.debug("Trying Provider Name {} ", propertyProviderName);
+          SolrSearchPropertyProvider provider = searchPropertyProviderTracker.getByName(propertyProviderName);
+          if (provider != null) {
+            LOGGER.debug("Trying Provider {} ", provider);
+            provider.loadUserProperties(request, propertiesMap);
+          } else {
+            LOGGER.warn("No properties provider found for {} ", propertyProviderName);
+          }
+        }
+      } else {
+        LOGGER.debug("No Provider ");
+      }
+
+      String queryTemplate = template.getTemplateString();
+
+      // process the query string before checking for missing terms to a) give processors a
+      // chance to set things and b) catch any missing terms added by the processors.
+      String queryString = templateService.evaluateTemplate(propertiesMap, queryTemplate);
+
+      // expand home directory references to full path; eg. ~user => a:user
+      queryString = SearchUtil.expandHomeDirectory(queryString);
+
+      // check for any missing terms & process the query template
+      Collection<String> missingTerms = templateService.missingTerms(queryString);
+      if (!missingTerms.isEmpty()) {
+        throw new MissingParameterException(
+            "Your request is missing parameters for the template: "
+                + StringUtils.join(missingTerms, ", "));
+      }
+
+      // collect query options
+      Map<String, String[]> queryOptions = template.getQueryOptions();
+
+      // process the options as templates and check for missing params
+      Map<String, Object> options = processOptions(propertiesMap, queryOptions, queryType);
+
+      return new Query(template.getPath(), queryType, queryString, options);
+    }
+
+    /**
+     * @param propertiesMap
+     * @param queryOptions
+     * @return
+     * @throws JSONException
+     * @throws MissingParameterException
+     */
+    private Map<String, Object> processOptions(Map<String, String> propertiesMap,
+        Map<String, String[]> queryOptions, String queryType) throws RepositoryException,
+        MissingParameterException {
+      Set<String> missingTerms = Sets.newHashSet();
+      Map<String, Object> options = Maps.newHashMap();
+      if (queryOptions != null) {
+        for(Map.Entry<String, String[]> entry : queryOptions.entrySet()) {
+          String key = entry.getKey();
+          String value[] = entry.getValue();
+
+          if (!JcrUtils.isJCRProperty(key)) {
+            if (value.length > 1) {
+              Set<String> processedVals = Sets.newHashSet();
+              for (String val : value) {
+                String processedVal = processValue(key, val, propertiesMap,
+                    queryType, missingTerms);
+                processedVals.add(processedVal);
+              }
+              if (!processedVals.isEmpty()) {
+                options.put(key, processedVals);
+              }
+            } else {
+              String val = value[0];
+              String processedVal = processValue(key, val, propertiesMap, queryType,
+                  missingTerms);
+              options.put(key, processedVal);
+            }
+          }
+        }
+      }
+
+      if (!missingTerms.isEmpty()) {
+        throw new MissingParameterException(
+            "Your request is missing parameters for the template: "
+                + StringUtils.join(missingTerms, ", "));
+      } else {
+        return options;
+      }
+    }
+
+    /**
+     * Process a value through the template service and check for missing fields.
+     *
+     * @param key
+     * @param val
+     * @param propertiesMap
+     * @param queryType
+     * @param missingTerms
+     * @return
+     */
+    private String processValue(String key, String val, Map<String, String> propertiesMap,
+        String queryType, Set<String> missingTerms) {
+      missingTerms.addAll(templateService.missingTerms(propertiesMap, val));
+      String processedVal = templateService.evaluateTemplate(propertiesMap, val);
+      if ("sort".equals(key)) {
+        processedVal = SearchUtil.escapeString(processedVal, queryType);
+      }
+      return processedVal;
+    }
+
+    /**
+     * Load properties from the query node, request and property provider.<br/>
+     *
+     * Overwrite order: query node &lt; request &lt; property provider<br/>
+     *
+     * This ordering allows the query node to set defaults, the request to override those
+     * defaults but the property provider to have the final say in what value is set.
+     *
+     * @param userId
+     * @param propertyProviderNames
+     * @return
+     * @throws RepositoryException
+     */
+    private Map<String, String> loadProperties(String userId, String[] propertyProviderNames,
+       Map<String, String> defaultProps, String queryType) throws RepositoryException {
+      Map<String, String> propertiesMap = new HashMap<String, String>();
+
+      // 0. load authorizable (user) information
+      String userPrivatePath = ClientUtils.escapeQueryChars(LitePersonalUtils
+         .getPrivatePath(userId));
+      propertiesMap.put("_userPrivatePath", userPrivatePath);
+      propertiesMap.put("_userId", ClientUtils.escapeQueryChars(userId));
+
+      // 1. load in properties from the query template node so defaults can be set
+      if (defaultProps != null) {
+        for (Map.Entry<String, String> entry : defaultProps.entrySet()) {
+          String key = entry.getKey();
+          if (!key.startsWith("jcr:") && !propertiesMap.containsKey(key)) {
+            String val = entry.getValue();
+            propertiesMap.put(key, val);
+          }
+        }
+      }
+
+      return propertiesMap;
+    }
+
+    @Override
+    public Query getQuery() throws Exception {
+      Resource resource = request.getResource();
+      if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
+        throw new IllegalStateException("unable to obtain Node from request");
+      }
       // KERN-1147 Respond better when all parameters haven't been provided for a query
       Query query;
 
@@ -218,44 +436,72 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
         throw new SearchServiceException("Query template is missing parameters", e);
       }
 
-      long nitems = SolrSearchUtil.longRequestParameter(request, PARAMS_ITEMS_PER_PAGE,
+      // This code overlaps in function with code in SolrSearchServlet.goGet()
+       long nitems = SolrSearchUtil.longRequestParameter(request, PARAMS_ITEMS_PER_PAGE,
          DEFAULT_PAGED_ITEMS);
-      long page = SolrSearchUtil.longRequestParameter(request, PARAMS_PAGE, 0);
+       long page = SolrSearchUtil.longRequestParameter(request, PARAMS_PAGE, 0);
 
-      // allow number of items to be specified in sakai:query-template-options
-      if (query.getOptions().containsKey(PARAMS_ITEMS_PER_PAGE)) {
+       // allow number of items to be specified in sakai:query-template-options
+       if (query.getOptions().containsKey(PARAMS_ITEMS_PER_PAGE)) {
         nitems = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
-      } else {
+       } else {
         // add this to the options so that all queries are constrained to a limited
         // number of returns per page.
         query.getOptions().put(PARAMS_ITEMS_PER_PAGE, Long.toString(nitems));
-      }
+       }
 
-      if (!query.getOptions().containsKey(PARAMS_PAGE)) {
+       if (!query.getOptions().containsKey(PARAMS_PAGE)) {
         // add this to the options so that all queries are constrained to a limited
         // number of returns per page.
         query.getOptions().put(PARAMS_PAGE, Long.toString(page));
-      }
+       }
+      //end overlap
 
       return query;
     }
-    return null;
   }
-  
+
   @Override
   protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response)
       throws ServletException, IOException {
-    try {
-      Resource resource = request.getResource();
-      if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
-        throw new IllegalStateException("unable to obtain Node from request");
-      }
-      Node node = resource.adaptTo(Node.class);
-      JcrSearchTemplate template = new JcrSearchTemplate(node);
-      Query query = getQuery(request, template);
+    ResourceResolver resolver = request.getResourceResolver();
+    Resource resource = request.getResource();
+    if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
+      throw new IllegalStateException("unable to obtain Node from request");
+    }
+    TelemetryCounter.incrementValue("search", "SolrSearchServlet", resource.getPath());
 
-      long nitems = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
-      long page = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_PAGE)));
+    try {
+      final Session session = StorageClientUtils.adaptToSession(resolver.adaptTo(javax.jcr.Session.class));
+      final Authorizable authz = session.getAuthorizableManager().findAuthorizable(request.getRemoteUser());
+      final Node node = resource.adaptTo(Node.class);
+
+      final SearchTemplate template = new JcrSearchTemplate(node);
+
+      final BackwardCompatibleSolrQueryFactory bcsqf = new BackwardCompatibleSolrQueryFactory(templateService,
+         searchPropertyProviderTracker, request, template);
+
+      // This code overlaps in function with code in BackwardCompatibleSolrQueryFactory.getQuery(...)
+       long nitems = SolrSearchUtil.longRequestParameter(request, PARAMS_ITEMS_PER_PAGE,
+         DEFAULT_PAGED_ITEMS);
+       long page = SolrSearchUtil.longRequestParameter(request, PARAMS_PAGE, 0);
+
+       final Map<String, String> defaults = template.getDefaultValues();
+
+       // allow number of items to be specified in sakai:query-template-options
+       if (defaults.containsKey(PARAMS_ITEMS_PER_PAGE)) {
+        nitems = Long.valueOf(String.valueOf(defaults.get(PARAMS_ITEMS_PER_PAGE)));
+       }
+      //end overlap
+
+      final SolrSearchResultSet rs;
+      try {
+        rs = searchServiceFactory.getSearchResultSet(bcsqf, page, nitems, session,  authz);
+      } catch (SolrSearchException e) {
+        LOGGER.error(e.getMessage(), e);
+        response.sendError(e.getCode(), e.getMessage());
+        return;
+      }
 
       boolean useBatch = template.isBatch();
       final String batchResultProcessorName = template.getBatchResultProcessor();
@@ -280,6 +526,17 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
       SolrSearchBatchJsonResultWriter batchResultWriter = defaultJsonBatchWriter;
       SolrSearchJsonResultWriter resultWriter = defaultJsonResultWriter;
 
+      /*
+        The order of this processing is important - template.getBatchResultWriter and template.getResultWriter
+        may return the name of a request processor. This was to preserve backward compatibility: result writer
+        interfaces were refactored out of request processor interfaces. Rather than revise all existing templates
+        to add a result writer field, it has been assumed that a template lacking such a field predates the
+        refactor and so the request processor should be returned.
+
+        In order to catch a case where the lack of a result writer *is* indeed an error we need to check for
+        null when looking up the ResultWriter. At that point we try to handle the situation by falling back to
+        the default result writer.
+       */
       String temp = null;
       if (template.isBatch()) {
         temp = template.getBatchResultWriter();
@@ -297,20 +554,6 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
         }
       }
 
-      SolrSearchResultSet rs;
-      try {
-        // Prepare the result set.
-        // This allows a processor to do other queries and manipulate the results.
-        if (useBatch) {
-          rs = searchBatchProcessor.getSearchResultSet(request, query);
-        } else {
-          rs = searchProcessor.getSearchResultSet(request, query);
-        }
-      } catch (SolrSearchException e) {
-        response.sendError(e.getCode(), e.getMessage());
-        return;
-      }
-
       response.setContentType("application/json");
       response.setCharacterEncoding("UTF-8");
 
@@ -325,7 +568,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
       write.array();
 
       Iterator<Result> iterator = rs.getResultSetIterator();
-      if (useBatch) {
+      if (template.isBatch()) {
         LOGGER.info("Using batch processor for results");
         batchResultWriter.writeResults(request, write, iterator);
       } else {
@@ -374,198 +617,6 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
       LOGGER.error(e.getMessage(), e);
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     }
-  }
-
-  /**
-   * Processes a velocity template so that variable references are replaced by the same
-   * properties in the property provider and request.
-   *
-   * @param request
-   *          the request.
-   * @param template
-   *          the query template.
-   * @return A processed query template
-   * @throws MissingParameterException
-   */
-  protected Query processQuery(SlingHttpServletRequest request, JcrSearchTemplate template)
-     throws RepositoryException, MissingParameterException, JSONException, StorageClientException,
-     AccessDeniedException {
-    // check the resource type and set the query type appropriately
-    // default to using solr for queries
-    final String resourceType = template.getResourceType();
-    String queryType;
-    if ("sakai/sparse-search".equals(resourceType)) {
-      queryType = Query.SPARSE;
-    } else {
-      queryType = Query.SOLR;
-    }
-
-    String[] propertyProviderNames = template.getPropertyProviderNames();
-    Map<String, String> defaultValues = template.getDefaultValues();
-    Map<String, String> propertiesMap = loadProperties(request.getRemoteUser(), propertyProviderNames,
-        defaultValues, queryType);
-
-    // load in properties from the request
-    RequestParameterMap params = request.getRequestParameterMap();
-    for (Entry<String, RequestParameter[]> entry : params.entrySet()) {
-      RequestParameter[] vals = entry.getValue();
-      String requestValue = vals[0].getString();
-
-      // blank values aren't cool
-      if (StringUtils.isBlank(requestValue)) {
-        continue;
-      }
-
-      // we're selective with what we escape to make sure we don't hinder
-      // search functionality
-      String key = entry.getKey();
-      String val = SearchUtil.escapeString(requestValue, queryType);
-      propertiesMap.put(key, val);
-    }
-
-    if (propertyProviderNames != null) {
-      for (String propertyProviderName : propertyProviderNames) {
-        LOGGER.debug("Trying Provider Name {} ", propertyProviderName);
-        SolrSearchPropertyProvider provider = searchPropertyProviderTracker.getByName(propertyProviderName);
-        if (provider != null) {
-          LOGGER.debug("Trying Provider {} ", provider);
-          provider.loadUserProperties(request, propertiesMap);
-        } else {
-          LOGGER.warn("No properties provider found for {} ", propertyProviderName);
-        }
-      }
-    } else {
-      LOGGER.debug("No Provider ");
-    }
-
-    String queryTemplate = template.getTemplateString();
-
-    // process the query string before checking for missing terms to a) give processors a
-    // chance to set things and b) catch any missing terms added by the processors.
-    String queryString = templateService.evaluateTemplate(propertiesMap, queryTemplate);
-
-    // expand home directory references to full path; eg. ~user => a:user
-    queryString = SearchUtil.expandHomeDirectory(queryString);
-
-    // check for any missing terms & process the query template
-    Collection<String> missingTerms = templateService.missingTerms(queryString);
-    if (!missingTerms.isEmpty()) {
-      throw new MissingParameterException(
-          "Your request is missing parameters for the template: "
-              + StringUtils.join(missingTerms, ", "));
-    }
-
-    // collect query options
-    Map<String, String[]> queryOptions = template.getQueryOptions();
-
-    // process the options as templates and check for missing params
-    Map<String, Object> options = processOptions(propertiesMap, queryOptions, queryType);
-
-    return new Query(template.getPath(), queryType, queryString, options);
-  }
-
-  /**
-   * @param propertiesMap
-   * @param queryOptions
-   * @return
-   * @throws JSONException
-   * @throws MissingParameterException
-   */
-  private Map<String, Object> processOptions(Map<String, String> propertiesMap,
-      Map<String, String[]> queryOptions, String queryType) throws RepositoryException,
-      MissingParameterException {
-    Set<String> missingTerms = Sets.newHashSet();
-    Map<String, Object> options = Maps.newHashMap();
-    if (queryOptions != null) {
-      for(Map.Entry<String, String[]> entry : queryOptions.entrySet()) {
-        String key = entry.getKey();
-        String value[] = entry.getValue();
-
-        if (!JcrUtils.isJCRProperty(key)) {
-          if (value.length > 1) {
-            Set<String> processedVals = Sets.newHashSet();
-            for (String val : value) {
-              String processedVal = processValue(key, val, propertiesMap,
-                  queryType, missingTerms);
-              processedVals.add(processedVal);
-            }
-            if (!processedVals.isEmpty()) {
-              options.put(key, processedVals);
-            }
-          } else {
-            String val = value[0];
-            String processedVal = processValue(key, val, propertiesMap, queryType,
-                missingTerms);
-            options.put(key, processedVal);
-          }
-        }
-      }
-    }
-
-    if (!missingTerms.isEmpty()) {
-      throw new MissingParameterException(
-          "Your request is missing parameters for the template: "
-              + StringUtils.join(missingTerms, ", "));
-    } else {
-      return options;
-    }
-  }
-
-  /**
-   * Process a value through the template service and check for missing fields.
-   *
-   * @param key
-   * @param val
-   * @param propertiesMap
-   * @param queryType
-   * @param missingTerms
-   * @return
-   */
-  private String processValue(String key, String val, Map<String, String> propertiesMap,
-      String queryType, Set<String> missingTerms) {
-    missingTerms.addAll(templateService.missingTerms(propertiesMap, val));
-    String processedVal = templateService.evaluateTemplate(propertiesMap, val);
-    if ("sort".equals(key)) {
-      processedVal = SearchUtil.escapeString(processedVal, queryType);
-    }
-    return processedVal;
-  }
-
-  /**
-   * Load properties from the query node, request and property provider.<br/>
-   *
-   * Overwrite order: query node &lt; request &lt; property provider<br/>
-   *
-   * This ordering allows the query node to set defaults, the request to override those
-   * defaults but the property provider to have the final say in what value is set.
-   *
-   * @param userId
-   * @param propertyProviderNames
-   * @return
-   * @throws RepositoryException
-   */
-  private Map<String, String> loadProperties(String userId, String[] propertyProviderNames,
-     Map<String, String> defaultProps, String queryType) throws RepositoryException {
-    Map<String, String> propertiesMap = new HashMap<String, String>();
-
-    // 0. load authorizable (user) information
-    String userPrivatePath = ClientUtils.escapeQueryChars(LitePersonalUtils
-       .getPrivatePath(userId));
-    propertiesMap.put("_userPrivatePath", userPrivatePath);
-    propertiesMap.put("_userId", ClientUtils.escapeQueryChars(userId));
-
-    // 1. load in properties from the query template node so defaults can be set
-    if (defaultProps != null) {
-      for (Map.Entry<String, String> entry : defaultProps.entrySet()) {
-        String key = entry.getKey();
-        if (!key.startsWith("jcr:") && !propertiesMap.containsKey(key)) {
-          String val = entry.getValue();
-          propertiesMap.put(key, val);
-        }
-      }
-    }
-
-    return propertiesMap;
   }
 
   private String[] getStringArrayProp(Node queryNode, String propName) throws RepositoryException {
