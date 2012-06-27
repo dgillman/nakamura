@@ -18,12 +18,32 @@
 package org.sakaiproject.nakamura.api.search.solr;
 
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.sakaiproject.nakamura.api.lite.Session;
+import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
 
 public interface SolrSearchServiceFactory {
 
+  /**
+   * @deprecated
+   * @param request
+   * @param query
+   * @param asAnon
+   * @return
+   * @throws SolrSearchException
+   */
   SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query,
       boolean asAnon) throws SolrSearchException;
 
+  /**
+   * @deprecated
+   * @param request
+   * @param query
+   * @return
+   * @throws SolrSearchException
+   */
   SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
       throws SolrSearchException;
+
+  SolrSearchResultSet getSearchResultSet(SolrQueryFactory queryFactory, long offset, long numRecords,
+      Session session, Authorizable authorizable) throws SolrSearchException;
 }

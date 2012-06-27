@@ -45,6 +45,8 @@ import org.sakaiproject.nakamura.api.lite.StorageClientException;
 import org.sakaiproject.nakamura.api.lite.StorageClientUtils;
 import org.sakaiproject.nakamura.api.lite.StorageConstants;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
+import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
+import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.lite.content.ContentManager;
 import org.sakaiproject.nakamura.api.search.solr.Query;
@@ -60,6 +62,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletResponse;
 
 /**
  *
@@ -105,6 +109,25 @@ public class SparseResultSetFactory implements ResultSetFactory {
    */
   public SolrSearchResultSet processQuery(SlingHttpServletRequest request, Query query,
       boolean asAnon) throws SolrSearchException {
+    Session session = StorageClientUtils.adaptToSession(request.getResourceResolver()
+        .adaptTo(javax.jcr.Session.class));
+
+    Authorizable authz = null;
+    try {
+      AuthorizableManager am = session.getAuthorizableManager();
+      authz = am.findAuthorizable(session.getUserId());
+    } catch (StorageClientException e) {
+      throw new SolrSearchException(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+    } catch (AccessDeniedException e) {
+      throw new SolrSearchException(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+    }
+
+    return processQuery(session, query, authz, 0, 0);
+  }
+
+  @Override
+  public SolrSearchResultSet processQuery(Session session, Query query, Authorizable authorizable, long offset,
+     long size) throws SolrSearchException {
     try {
     // use solr parsing to get the terms from the query string
     QueryParser parser = new QueryParser(Version.LUCENE_40, "id",
@@ -150,8 +173,6 @@ public class SparseResultSetFactory implements ResultSetFactory {
        props.put(StorageConstants.CUSTOM_STATEMENT_SET, name);
     }
 
-    Session session = StorageClientUtils.adaptToSession(request.getResourceResolver()
-        .adaptTo(javax.jcr.Session.class));
     ContentManager cm = session.getContentManager();
     long tquery = System.currentTimeMillis();
     Iterable<Content> items = cm.find(props);
