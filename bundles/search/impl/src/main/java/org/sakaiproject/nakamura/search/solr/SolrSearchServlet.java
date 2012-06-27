@@ -58,8 +58,10 @@ import org.sakaiproject.nakamura.api.search.solr.MissingParameterException;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SearchServiceException;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
@@ -151,6 +153,12 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   @Reference
   private SearchResponseDecoratorTracker searchResponseDecoratorTracker;
 
+  @Reference
+  private SearchBatchJsonResultWriterTracker searchBatchResultWriterTracker;
+
+  @Reference
+  private SearchJsonResultWriterTracker searchResultWriterTracker;
+
 
   // Default processors
   /**
@@ -170,6 +178,25 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
       + SolrSearchResultProcessor.DEFAULT_PROCESSOR_PROP + "=true))";
   @Reference(target = DEFAULT_SEARCH_PROC_TARGET)
   protected transient SolrSearchResultProcessor defaultSearchProcessor;
+
+  //Default result writers
+   /**
+    * Reference uses property set on NodeSearchResultProcessor. Other processors can become
+   * the default by setting {@link org.sakaiproject.nakamura.api.search.solr.SolrSearchResultProcessor.DEFAULT_PROCESOR_PROP} to true.
+    */
+  private static final String DEFAULT_BATCH_SEARCH_WRITE_TARGET = "(&("
+      + SolrSearchBatchJsonResultWriter.DEFAULT_BATCH_WRITER_PROP + "=true))";
+  @Reference(target = DEFAULT_BATCH_SEARCH_WRITE_TARGET)
+  protected transient SolrSearchBatchJsonResultWriter defaultJsonBatchWriter;
+
+   /**
+    * Reference uses property set on NodeSearchResultProcessor. Other processors can become
+   * the default by setting {@link org.sakaiproject.nakamura.api.search.SearchResultProcessor.DEFAULT_PROCESSOR_PROP} to true.
+    */
+  private static final String DEFAULT_SEARCH_WRITER_TARGET = "(&("
+      + SolrSearchJsonResultWriter.DEFAULT_WRITER_PROP + "=true))";
+  @Reference(target = DEFAULT_SEARCH_WRITER_TARGET)
+  protected transient SolrSearchJsonResultWriter defaultJsonResultWriter;
 
   @Reference
   private transient TemplateService templateService;
@@ -250,6 +277,26 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
         }
       }
 
+      SolrSearchBatchJsonResultWriter batchResultWriter = defaultJsonBatchWriter;
+      SolrSearchJsonResultWriter resultWriter = defaultJsonResultWriter;
+
+      String temp = null;
+      if (template.isBatch()) {
+        temp = template.getBatchResultWriter();
+        if (temp != null) {
+          batchResultWriter = searchBatchResultWriterTracker.getByName(temp);
+        } else if (searchBatchProcessor != null) {
+          batchResultWriter = searchBatchProcessor;
+        }
+      } else {
+        temp = template.getResultWriter();
+        if (temp != null) {
+          resultWriter = searchResultWriterTracker.getByName(temp);
+        } else if (searchProcessor != null) {
+          resultWriter = searchProcessor;
+        }
+      }
+
       SolrSearchResultSet rs;
       try {
         // Prepare the result set.
@@ -280,7 +327,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
       Iterator<Result> iterator = rs.getResultSetIterator();
       if (useBatch) {
         LOGGER.info("Using batch processor for results");
-        searchBatchProcessor.writeResults(request, write, iterator);
+        batchResultWriter.writeResults(request, write, iterator);
       } else {
         LOGGER.info("Using regular processor for results");
         // We don't skip any rows ourselves here.
@@ -290,7 +337,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
           Result result = iterator.next();
 
           // Write the result for this row.
-          searchProcessor.writeResult(request, write, result);
+          resultWriter.writeResult(request, write, result);
         }
       }
       write.endArray();
