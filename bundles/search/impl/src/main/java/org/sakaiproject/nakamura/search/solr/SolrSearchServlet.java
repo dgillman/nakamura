@@ -23,10 +23,7 @@ import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.JSON
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_ITEMS_PER_PAGE;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.PARAMS_PAGE;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_BATCHRESULTPROCESSOR;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_PROPERTY_PROVIDER;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE_DEFAULTS;
-import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_QUERY_TEMPLATE_OPTIONS;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_RESULTPROCESSOR;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SAKAI_SEARCHRESPONSEDECORATOR;
 import static org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants.SEARCH_PATH_PREFIX;
@@ -52,12 +49,15 @@ import org.sakaiproject.nakamura.api.doc.ServiceDocumentation;
 import org.sakaiproject.nakamura.api.doc.ServiceMethod;
 import org.sakaiproject.nakamura.api.doc.ServiceParameter;
 import org.sakaiproject.nakamura.api.doc.ServiceResponse;
+import org.sakaiproject.nakamura.api.lite.StorageClientException;
+import org.sakaiproject.nakamura.api.lite.accesscontrol.AccessDeniedException;
 import org.sakaiproject.nakamura.api.search.SearchResponseDecorator;
 import org.sakaiproject.nakamura.api.search.SearchResultProcessor;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.MissingParameterException;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SearchServiceException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchPropertyProvider;
@@ -69,7 +69,6 @@ import org.sakaiproject.nakamura.util.ExtendedJSONWriter;
 import org.sakaiproject.nakamura.util.JcrUtils;
 import org.sakaiproject.nakamura.util.LitePersonalUtils;
 import org.sakaiproject.nakamura.util.ServletUtils;
-import org.sakaiproject.nakamura.util.telemetry.TelemetryCounter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +81,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import javax.jcr.Node;
-import javax.jcr.PropertyIterator;
 import javax.jcr.RepositoryException;
 import javax.jcr.Value;
 import javax.servlet.ServletException;
@@ -176,137 +174,156 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
   @Reference
   private transient TemplateService templateService;
 
+  protected Query getQuery(final SlingHttpServletRequest request, final JcrSearchTemplate template)
+     throws RepositoryException, JSONException, StorageClientException, AccessDeniedException {
+    Resource resource = request.getResource();
+    if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
+      throw new IllegalStateException("unable to obtain Node from request");
+    }
+    Node node = resource.adaptTo(Node.class);
+    if (node != null && node.hasProperty(SAKAI_QUERY_TEMPLATE)) {
+      // KERN-1147 Respond better when all parameters haven't been provided for a query
+      Query query;
+
+      try {
+        query = processQuery(request, template);
+      } catch (MissingParameterException e) {
+        throw new SearchServiceException("Query template is missing parameters", e);
+      }
+
+      long nitems = SolrSearchUtil.longRequestParameter(request, PARAMS_ITEMS_PER_PAGE,
+         DEFAULT_PAGED_ITEMS);
+      long page = SolrSearchUtil.longRequestParameter(request, PARAMS_PAGE, 0);
+
+      // allow number of items to be specified in sakai:query-template-options
+      if (query.getOptions().containsKey(PARAMS_ITEMS_PER_PAGE)) {
+        nitems = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
+      } else {
+        // add this to the options so that all queries are constrained to a limited
+        // number of returns per page.
+        query.getOptions().put(PARAMS_ITEMS_PER_PAGE, Long.toString(nitems));
+      }
+
+      if (!query.getOptions().containsKey(PARAMS_PAGE)) {
+        // add this to the options so that all queries are constrained to a limited
+        // number of returns per page.
+        query.getOptions().put(PARAMS_PAGE, Long.toString(page));
+      }
+
+      return query;
+    }
+    return null;
+  }
+  
   @Override
   protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response)
       throws ServletException, IOException {
     try {
       Resource resource = request.getResource();
       if (!resource.getPath().startsWith(SEARCH_PATH_PREFIX)) {
-        response.sendError(HttpServletResponse.SC_FORBIDDEN,
-            "Search templates can only be executed if they are located under "
-                + SEARCH_PATH_PREFIX);
-        return;
+        throw new IllegalStateException("unable to obtain Node from request");
       }
       Node node = resource.adaptTo(Node.class);
-      if (node != null && node.hasProperty(SAKAI_QUERY_TEMPLATE)) {
-        // KERN-1147 Respond better when all parameters haven't been provided for a query
-        Query query;
-        try {
-          query = processQuery(request, node);
-        } catch (MissingParameterException e) {
-          response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
-          return;
+      JcrSearchTemplate template = new JcrSearchTemplate(node);
+      Query query = getQuery(request, template);
+
+      long nitems = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
+      long page = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
+
+      boolean useBatch = template.isBatch();
+      final String batchResultProcessorName = template.getBatchResultProcessor();
+      // Get the
+      SolrSearchBatchResultProcessor searchBatchProcessor = defaultSearchBatchProcessor;
+      if (batchResultProcessorName != null) {
+        searchBatchProcessor = searchBatchResultProcessorTracker.getByName(batchResultProcessorName);
+        if (searchBatchProcessor == null) {
+          searchBatchProcessor = defaultSearchBatchProcessor;
         }
-
-        long nitems = SolrSearchUtil.longRequestParameter(request, PARAMS_ITEMS_PER_PAGE,
-            DEFAULT_PAGED_ITEMS);
-        long page = SolrSearchUtil.longRequestParameter(request, PARAMS_PAGE, 0);
-
-        // allow number of items to be specified in sakai:query-template-options
-        if (query.getOptions().containsKey(PARAMS_ITEMS_PER_PAGE)) {
-          nitems = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
-        } else {
-          // add this to the options so that all queries are constrained to a limited
-          // number of returns per page.
-          query.getOptions().put(PARAMS_ITEMS_PER_PAGE, Long.toString(nitems));
-        }
-
-        if (!query.getOptions().containsKey(PARAMS_PAGE)) {
-          // add this to the options so that all queries are constrained to a limited
-          // number of returns per page.
-          query.getOptions().put(PARAMS_PAGE, Long.toString(page));
-        }
-
-        boolean useBatch = false;
-        // Get the
-        SolrSearchBatchResultProcessor searchBatchProcessor = defaultSearchBatchProcessor;
-        if (node.hasProperty(SAKAI_BATCHRESULTPROCESSOR)) {
-          searchBatchProcessor = searchBatchResultProcessorTracker.getByName(node.getProperty(
-              SAKAI_BATCHRESULTPROCESSOR).getString());
-          useBatch = true;
-          if (searchBatchProcessor == null) {
-            searchBatchProcessor = defaultSearchBatchProcessor;
-          }
-        }
-
-        SolrSearchResultProcessor searchProcessor = defaultSearchProcessor;
-        if (node.hasProperty(SAKAI_RESULTPROCESSOR)) {
-          searchProcessor = searchResultProcessorTracker.getByName(node.getProperty(SAKAI_RESULTPROCESSOR)
-              .getString());
-          if (searchProcessor == null) {
-            searchProcessor = defaultSearchProcessor;
-          }
-        }
-
-        SolrSearchResultSet rs;
-        try {
-          // Prepare the result set.
-          // This allows a processor to do other queries and manipulate the results.
-          if (useBatch) {
-            rs = searchBatchProcessor.getSearchResultSet(request, query);
-          } else {
-            rs = searchProcessor.getSearchResultSet(request, query);
-          }
-        } catch (SolrSearchException e) {
-          response.sendError(e.getCode(), e.getMessage());
-          return;
-        }
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-
-        ExtendedJSONWriter write = new ExtendedJSONWriter(response.getWriter());
-        write.setTidy(ServletUtils.isTidy(request));
-
-        write.object();
-        write.key(PARAMS_ITEMS_PER_PAGE);
-        write.value(nitems);
-        write.key(JSON_RESULTS);
-
-        write.array();
-
-        Iterator<Result> iterator = rs.getResultSetIterator();
-        if (useBatch) {
-          LOGGER.info("Using batch processor for results");
-          searchBatchProcessor.writeResults(request, write, iterator);
-        } else {
-          LOGGER.info("Using regular processor for results");
-          // We don't skip any rows ourselves here.
-          // We expect a rowIterator coming from a resultset to be at the right place.
-          for (long i = 0; i < nitems && iterator.hasNext(); i++) {
-            // Get the next row.
-            Result result = iterator.next();
-
-            // Write the result for this row.
-            searchProcessor.writeResult(request, write, result);
-          }
-        }
-        write.endArray();
-
-        // write the solr facets out if they exist
-        writeFacetFields(rs, write);
-
-        // write the total out after processing the list to give the underlying iterator
-        // a chance to walk the results then report how many there were.
-        write.key(TOTAL);
-        write.value(rs.getSize());
-
-        if ( node.hasProperty(SAKAI_SEARCHRESPONSEDECORATOR)) {
-          String[] decoratorNames = getStringArrayProp(node, SAKAI_SEARCHRESPONSEDECORATOR);
-          for ( String name : decoratorNames ) {
-            SearchResponseDecorator decorator = searchResponseDecoratorTracker.getByName(name);
-            if ( decorator != null ) {
-              decorator.decorateSearchResponse(request, write);
-            }
-          }
-        }
-
-        write.endObject();
       }
+
+      final String resultProcessorName = template.getResultProcessor();
+      SolrSearchResultProcessor searchProcessor = defaultSearchProcessor;
+      if (resultProcessorName != null) {
+        searchProcessor = searchResultProcessorTracker.getByName(resultProcessorName);
+        if (searchProcessor == null) {
+          searchProcessor = defaultSearchProcessor;
+        }
+      }
+
+      SolrSearchResultSet rs;
+      try {
+        // Prepare the result set.
+        // This allows a processor to do other queries and manipulate the results.
+        if (useBatch) {
+          rs = searchBatchProcessor.getSearchResultSet(request, query);
+        } else {
+          rs = searchProcessor.getSearchResultSet(request, query);
+        }
+      } catch (SolrSearchException e) {
+        response.sendError(e.getCode(), e.getMessage());
+        return;
+      }
+
+      response.setContentType("application/json");
+      response.setCharacterEncoding("UTF-8");
+
+      ExtendedJSONWriter write = new ExtendedJSONWriter(response.getWriter());
+      write.setTidy(ServletUtils.isTidy(request));
+
+      write.object();
+      write.key(PARAMS_ITEMS_PER_PAGE);
+      write.value(nitems);
+      write.key(JSON_RESULTS);
+
+      write.array();
+
+      Iterator<Result> iterator = rs.getResultSetIterator();
+      if (useBatch) {
+        LOGGER.info("Using batch processor for results");
+        searchBatchProcessor.writeResults(request, write, iterator);
+      } else {
+        LOGGER.info("Using regular processor for results");
+        // We don't skip any rows ourselves here.
+        // We expect a rowIterator coming from a resultset to be at the right place.
+        for (long i = 0; i < nitems && iterator.hasNext(); i++) {
+          // Get the next row.
+          Result result = iterator.next();
+
+          // Write the result for this row.
+          searchProcessor.writeResult(request, write, result);
+        }
+      }
+      write.endArray();
+
+      // write the solr facets out if they exist
+      writeFacetFields(rs, write);
+
+      // write the total out after processing the list to give the underlying iterator
+      // a chance to walk the results then report how many there were.
+      write.key(TOTAL);
+      write.value(rs.getSize());
+
+      if ( node.hasProperty(SAKAI_SEARCHRESPONSEDECORATOR)) {
+        String[] decoratorNames = getStringArrayProp(node, SAKAI_SEARCHRESPONSEDECORATOR);
+        for ( String name : decoratorNames ) {
+          SearchResponseDecorator decorator = searchResponseDecoratorTracker.getByName(name);
+          if ( decorator != null ) {
+            decorator.decorateSearchResponse(request, write);
+          }
+        }
+      }
+
+      write.endObject();
     } catch (RepositoryException e) {
       LOGGER.error(e.getMessage(), e);
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     } catch (JSONException e) {
+      LOGGER.error(e.getMessage(), e);
+      response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+    } catch (AccessDeniedException e) {
+      LOGGER.error(e.getMessage(), e);
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+    } catch (StorageClientException e) {
       LOGGER.error(e.getMessage(), e);
       response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
     }
@@ -318,37 +335,63 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
    *
    * @param request
    *          the request.
-   * @param queryTemplate
+   * @param template
    *          the query template.
-   * @param propertyProviderName
    * @return A processed query template
    * @throws MissingParameterException
    */
-  protected Query processQuery(SlingHttpServletRequest request, Node queryNode)
-      throws RepositoryException, MissingParameterException, JSONException {
+  protected Query processQuery(SlingHttpServletRequest request, JcrSearchTemplate template)
+     throws RepositoryException, MissingParameterException, JSONException, StorageClientException,
+     AccessDeniedException {
     // check the resource type and set the query type appropriately
     // default to using solr for queries
-    javax.jcr.Property resourceType = queryNode.getProperty("sling:resourceType");
+    final String resourceType = template.getResourceType();
     String queryType;
-    if ("sakai/sparse-search".equals(resourceType.getString())) {
+    if ("sakai/sparse-search".equals(resourceType)) {
       queryType = Query.SPARSE;
     } else {
       queryType = Query.SOLR;
     }
 
-    String[] propertyProviderNames = null;
-    if (queryNode.hasProperty(SAKAI_PROPERTY_PROVIDER)) {
-      propertyProviderNames = getStringArrayProp(queryNode, SAKAI_PROPERTY_PROVIDER);
-    }
-    PropertyIterator defaultValues = null;
-    if (queryNode.hasNode(SAKAI_QUERY_TEMPLATE_DEFAULTS)) {
-      Node defaults = queryNode.getNode(SAKAI_QUERY_TEMPLATE_DEFAULTS);
-      defaultValues = defaults.getProperties();
-    }
-    Map<String, String> propertiesMap = loadProperties(request, propertyProviderNames,
+    String[] propertyProviderNames = template.getPropertyProviderNames();
+    Map<String, String> defaultValues = template.getDefaultValues();
+    Map<String, String> propertiesMap = loadProperties(request.getRemoteUser(), propertyProviderNames,
         defaultValues, queryType);
 
-    String queryTemplate = queryNode.getProperty(SAKAI_QUERY_TEMPLATE).getString();
+    // load in properties from the request
+    RequestParameterMap params = request.getRequestParameterMap();
+    for (Entry<String, RequestParameter[]> entry : params.entrySet()) {
+      RequestParameter[] vals = entry.getValue();
+      String requestValue = vals[0].getString();
+
+      // blank values aren't cool
+      if (StringUtils.isBlank(requestValue)) {
+        continue;
+      }
+
+      // we're selective with what we escape to make sure we don't hinder
+      // search functionality
+      String key = entry.getKey();
+      String val = SearchUtil.escapeString(requestValue, queryType);
+      propertiesMap.put(key, val);
+    }
+
+    if (propertyProviderNames != null) {
+      for (String propertyProviderName : propertyProviderNames) {
+        LOGGER.debug("Trying Provider Name {} ", propertyProviderName);
+        SolrSearchPropertyProvider provider = searchPropertyProviderTracker.getByName(propertyProviderName);
+        if (provider != null) {
+          LOGGER.debug("Trying Provider {} ", provider);
+          provider.loadUserProperties(request, propertiesMap);
+        } else {
+          LOGGER.warn("No properties provider found for {} ", propertyProviderName);
+        }
+      }
+    } else {
+      LOGGER.debug("No Provider ");
+    }
+
+    String queryTemplate = template.getTemplateString();
 
     // process the query string before checking for missing terms to a) give processors a
     // chance to set things and b) catch any missing terms added by the processors.
@@ -366,16 +409,12 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
     }
 
     // collect query options
-    PropertyIterator queryOptions = null;
-    if (queryNode.hasNode(SAKAI_QUERY_TEMPLATE_OPTIONS)) {
-      Node queryOptionsNode = queryNode.getNode(SAKAI_QUERY_TEMPLATE_OPTIONS);
-      queryOptions = queryOptionsNode.getProperties();
-    }
+    Map<String, String[]> queryOptions = template.getQueryOptions();
 
     // process the options as templates and check for missing params
     Map<String, Object> options = processOptions(propertiesMap, queryOptions, queryType);
 
-    return new Query(queryNode.getPath(), queryType, queryString, options);
+    return new Query(template.getPath(), queryType, queryString, options);
   }
 
   /**
@@ -386,21 +425,20 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
    * @throws MissingParameterException
    */
   private Map<String, Object> processOptions(Map<String, String> propertiesMap,
-      PropertyIterator queryOptions, String queryType) throws RepositoryException,
+      Map<String, String[]> queryOptions, String queryType) throws RepositoryException,
       MissingParameterException {
     Set<String> missingTerms = Sets.newHashSet();
     Map<String, Object> options = Maps.newHashMap();
     if (queryOptions != null) {
-      while (queryOptions.hasNext()) {
-        javax.jcr.Property prop = queryOptions.nextProperty();
-        String key = prop.getName();
+      for(Map.Entry<String, String[]> entry : queryOptions.entrySet()) {
+        String key = entry.getKey();
+        String value[] = entry.getValue();
 
         if (!JcrUtils.isJCRProperty(key)) {
-          if (prop.isMultiple()) {
+          if (value.length > 1) {
             Set<String> processedVals = Sets.newHashSet();
-            Value[] vals = prop.getValues();
-            for (Value val : vals) {
-              String processedVal = processValue(key, val.getString(), propertiesMap,
+            for (String val : value) {
+              String processedVal = processValue(key, val, propertiesMap,
                   queryType, missingTerms);
               processedVals.add(processedVal);
             }
@@ -408,7 +446,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
               options.put(key, processedVals);
             }
           } else {
-            String val = prop.getString();
+            String val = value[0];
             String processedVal = processValue(key, val, propertiesMap, queryType,
                 missingTerms);
             options.put(key, processedVal);
@@ -454,66 +492,30 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
    * This ordering allows the query node to set defaults, the request to override those
    * defaults but the property provider to have the final say in what value is set.
    *
-   * @param request
-   * @param propertyProviderName
+   * @param userId
+   * @param propertyProviderNames
    * @return
    * @throws RepositoryException
    */
-  private Map<String, String> loadProperties(SlingHttpServletRequest request,
-      String[] propertyProviderNames, PropertyIterator defaultProps, String queryType) throws RepositoryException {
+  private Map<String, String> loadProperties(String userId, String[] propertyProviderNames,
+     Map<String, String> defaultProps, String queryType) throws RepositoryException {
     Map<String, String> propertiesMap = new HashMap<String, String>();
 
     // 0. load authorizable (user) information
-    String userId = request.getRemoteUser();
     String userPrivatePath = ClientUtils.escapeQueryChars(LitePersonalUtils
-        .getPrivatePath(userId));
+       .getPrivatePath(userId));
     propertiesMap.put("_userPrivatePath", userPrivatePath);
     propertiesMap.put("_userId", ClientUtils.escapeQueryChars(userId));
 
     // 1. load in properties from the query template node so defaults can be set
     if (defaultProps != null) {
-      while (defaultProps.hasNext()) {
-        javax.jcr.Property prop = defaultProps.nextProperty();
-        String key = prop.getName();
-        if (!key.startsWith("jcr:") && !propertiesMap.containsKey(key) && !prop.isMultiple()) {
-          String val = prop.getString();
+      for (Map.Entry<String, String> entry : defaultProps.entrySet()) {
+        String key = entry.getKey();
+        if (!key.startsWith("jcr:") && !propertiesMap.containsKey(key)) {
+          String val = entry.getValue();
           propertiesMap.put(key, val);
         }
       }
-    }
-
-    // 2. load in properties from the request
-    RequestParameterMap params = request.getRequestParameterMap();
-    for (Entry<String, RequestParameter[]> entry : params.entrySet()) {
-      RequestParameter[] vals = entry.getValue();
-      String requestValue = vals[0].getString();
-
-      // blank values aren't cool
-      if (StringUtils.isBlank(requestValue)) {
-        continue;
-      }
-
-      // we're selective with what we escape to make sure we don't hinder
-      // search functionality
-      String key = entry.getKey();
-      String val = SearchUtil.escapeString(requestValue, queryType);
-      propertiesMap.put(key, val);
-    }
-
-    // 3. load properties from a property provider
-    if (propertyProviderNames != null) {
-      for (String propertyProviderName : propertyProviderNames) {
-        LOGGER.debug("Trying Provider Name {} ", propertyProviderName);
-        SolrSearchPropertyProvider provider = searchPropertyProviderTracker.getByName(propertyProviderName);
-        if (provider != null) {
-          LOGGER.debug("Trying Provider {} ", provider);
-          provider.loadUserProperties(request, propertiesMap);
-        } else {
-          LOGGER.warn("No properties provider found for {} ", propertyProviderName);
-        }
-      }
-    } else {
-      LOGGER.debug("No Provider ");
     }
 
     return propertiesMap;
