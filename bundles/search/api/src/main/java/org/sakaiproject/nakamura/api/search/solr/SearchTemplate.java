@@ -17,18 +17,31 @@
  */
 package org.sakaiproject.nakamura.api.search.solr;
 
-import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.io.JSONWriter;
+import java.util.Map;
 
-import java.util.Iterator;
+public interface SearchTemplate {
 
-public interface SolrSearchBatchResultProcessor extends SolrSearchBatchJsonResultWriter {
+  public boolean isBatch();
 
-  String DEFAULT_BATCH_PROCESSOR_PROP = "sakai.solr.search.processor.batch.default";
+  public String[] getPropertyProviderNames();
 
+  public Map<String,String> getDefaultValues();
 
-  SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
-      throws SolrSearchException;
+  public String[] getDecoratorNames();
 
+  public String getResourceType();
+
+  public String getTemplateString();
+
+  public Map<String,String[]> getQueryOptions();
+
+  public String getPath();
+
+  String getBatchResultProcessor();
+
+  String getBatchResultWriter();
+
+  String getResultProcessor();
+
+  String getResultWriter();
 }

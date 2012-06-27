@@ -17,18 +17,20 @@
  */
 package org.sakaiproject.nakamura.api.search.solr;
 
-import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.commons.json.JSONException;
-import org.apache.sling.commons.json.io.JSONWriter;
+public class SearchServiceException extends RuntimeException {
+  public SearchServiceException() {
+    super();    //To change body of overridden methods use File | Settings | File Templates.
+  }
 
-import java.util.Iterator;
+  public SearchServiceException(String s) {
+    super(s);    //To change body of overridden methods use File | Settings | File Templates.
+  }
 
-public interface SolrSearchBatchResultProcessor extends SolrSearchBatchJsonResultWriter {
+  public SearchServiceException(String s, Throwable throwable) {
+    super(s, throwable);    //To change body of overridden methods use File | Settings | File Templates.
+  }
 
-  String DEFAULT_BATCH_PROCESSOR_PROP = "sakai.solr.search.processor.batch.default";
-
-
-  SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
-      throws SolrSearchException;
-
+  public SearchServiceException(Throwable throwable) {
+    super(throwable);    //To change body of overridden methods use File | Settings | File Templates.
+  }
 }

@@ -21,14 +21,11 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.commons.json.JSONException;
 import org.apache.sling.commons.json.io.JSONWriter;
 
-import java.util.Iterator;
+public interface SolrSearchJsonResultWriter {
 
-public interface SolrSearchBatchResultProcessor extends SolrSearchBatchJsonResultWriter {
+  public static final String DEFAULT_WRITER_PROP = "sakai.solr.search.writer.default";
 
-  String DEFAULT_BATCH_PROCESSOR_PROP = "sakai.solr.search.processor.batch.default";
-
-
-  SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
-      throws SolrSearchException;
+  void writeResult(SlingHttpServletRequest request, JSONWriter write, Result result)
+      throws JSONException;
 
 }
