@@ -255,7 +255,7 @@ public class SolrSearchServlet extends SlingSafeMethodsServlet {
       Query query = getQuery(request, template);
 
       long nitems = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
-      long page = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_ITEMS_PER_PAGE)));
+      long page = Long.valueOf(String.valueOf(query.getOptions().get(PARAMS_PAGE)));
 
       boolean useBatch = template.isBatch();
       final String batchResultProcessorName = template.getBatchResultProcessor();

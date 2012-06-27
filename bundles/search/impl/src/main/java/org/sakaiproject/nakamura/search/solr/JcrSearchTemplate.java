@@ -60,7 +60,7 @@ public class JcrSearchTemplate implements SearchTemplate {
     resultProcessor = getStringProperty(queryNode, SAKAI_RESULTPROCESSOR);
     resultWriter = getStringProperty(queryNode, SAKAI_RESULTWRITER);
 
-    batch = (batchResultProcessor != null && batchResultWriter != null);
+    batch = batchResultProcessor != null;
 
     if (queryNode.hasNode(SAKAI_QUERY_TEMPLATE_DEFAULTS)) {
       final ImmutableMap.Builder<String, String> builder = new ImmutableMap.Builder<String, String>();
