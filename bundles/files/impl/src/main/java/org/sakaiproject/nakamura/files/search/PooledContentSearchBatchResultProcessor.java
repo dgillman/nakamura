@@ -38,6 +38,7 @@ import org.sakaiproject.nakamura.api.lite.content.Content;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchJsonResultWriter;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
@@ -54,7 +55,9 @@ import java.util.Iterator;
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "PooledContentFiles"),
-    @Property(name = SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP, boolValue = true)
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "PooledContentFiles"),
+    @Property(name = SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP, boolValue = true),
+    @Property(name = SolrSearchBatchJsonResultWriter.DEFAULT_BATCH_WRITER_PROP, boolValue = true)
 })
 @Service
 public class PooledContentSearchBatchResultProcessor implements

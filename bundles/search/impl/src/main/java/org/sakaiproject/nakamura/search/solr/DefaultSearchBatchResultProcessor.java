@@ -45,9 +45,7 @@ import java.util.Iterator;
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
     @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "Resource"),
-    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "Resource"),
-    @Property(name = SolrSearchBatchResultProcessor.DEFAULT_BATCH_PROCESSOR_PROP, boolValue = true),
-    @Property(name = SolrSearchBatchJsonResultWriter.DEFAULT_BATCH_WRITER_PROP, boolValue = true)
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "Resource")
 })
 @Service
 public class DefaultSearchBatchResultProcessor implements

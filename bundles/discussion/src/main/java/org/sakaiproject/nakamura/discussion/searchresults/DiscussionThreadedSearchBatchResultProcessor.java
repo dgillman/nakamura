@@ -18,6 +18,7 @@
 package org.sakaiproject.nakamura.discussion.searchresults;
 
 import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
@@ -37,6 +38,7 @@ import org.sakaiproject.nakamura.api.presence.PresenceService;
 import org.sakaiproject.nakamura.api.search.solr.Query;
 import org.sakaiproject.nakamura.api.search.solr.Result;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchException;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchServiceFactory;
@@ -58,18 +60,17 @@ import javax.jcr.RepositoryException;
  * Formats message node search results
  */
 @Component(label = "%discussion.threadedSearchBatch.label", description = "%discussion.threadedSearchBatch.desc")
+@Properties(value = {
+    @Property(name = "service.vendor", value = "The Sakai Foundation"),
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "DiscussionThreaded"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "DiscussionThreaded")
+})
 @Service
 public class DiscussionThreadedSearchBatchResultProcessor implements
     SolrSearchBatchResultProcessor {
 
   public static final Logger LOG = LoggerFactory
       .getLogger(DiscussionThreadedSearchBatchResultProcessor.class);
-
-  @Property(value = "The Sakai Foundation")
-  static final String SERVICE_VENDOR = "service.vendor";
-
-  @Property(value = "DiscussionThreaded")
-  static final String SEARCH_BATCHPROCESSOR = "sakai.search.batchprocessor";
 
   @Reference
   PresenceService presenceService;
@@ -144,12 +145,6 @@ public class DiscussionThreadedSearchBatchResultProcessor implements
     }
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.sakaiproject.nakamura.api.search.solr.SolrSearchBatchResultProcessor#getSearchResultSet(org.apache.sling.api.SlingHttpServletRequest,
-   *      java.lang.String)
-   */
   public SolrSearchResultSet getSearchResultSet(SlingHttpServletRequest request, Query query)
       throws SolrSearchException {
       // Return the result set.

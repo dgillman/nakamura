@@ -27,6 +27,7 @@ import org.sakaiproject.nakamura.api.search.SearchException;
 import org.sakaiproject.nakamura.api.search.SearchResultSet;
 import org.sakaiproject.nakamura.api.search.SearchUtil;
 import org.sakaiproject.nakamura.api.search.ValidatingRowIterator;
+import org.sakaiproject.nakamura.api.search.solr.SolrSearchConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,8 @@ import javax.jcr.query.QueryResult;
 @Service
 @Properties(value = {
     @Property(name = "service.vendor", value = "The Sakai Foundation"),
-    @Property(name = SearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "GroupMembers")
+    @Property(name = SolrSearchConstants.REG_BATCH_PROCESSOR_NAMES, value = "GroupMembers"),
+    @Property(name = SolrSearchConstants.REG_BATCH_WRITER_NAMES, value = "GroupMembers")
 })
 public class GroupMembersSearchResultProcessor extends NodeSearchBatchResultProcessor {
   private static final Logger logger = LoggerFactory
