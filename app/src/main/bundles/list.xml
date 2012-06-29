@@ -529,7 +529,7 @@ KERN-1187
     <bundle>
       <groupId>org.sakaiproject.nakamura</groupId>
       <artifactId>org.sakaiproject.nakamura.solr</artifactId>
-      <version>1.4.2-rsmart</version>
+      <version>1.4.2-rsmart-SNAPSHOT</version>
     </bundle>
     <bundle>
       <groupId>org.sakaiproject.nakamura</groupId>
