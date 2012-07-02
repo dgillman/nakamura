@@ -1,6 +1,5 @@
 package org.sakaiproject.nakamura.api.dynamicconfig;
 
-import java.io.IOException;
 import java.io.OutputStream;
 
 /**
