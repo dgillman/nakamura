@@ -364,8 +364,6 @@ def main()
             content = resize_and_write_file filename_p, filename_thumb, 180, 225
             post_file_to_server id, content, :small, index + 1
           end
-
-          FileUtils.remove_dir PREV_DIR + "/#{id}"
         end
 
         # Pass on the page_count
@@ -383,6 +381,7 @@ def main()
       # No matter what we flag the file as processed and delete the temp copied file.
       @s.execute_post @s.url_for("p/#{id}"), {"sakai:needsprocessing" => "false"}
       FileUtils.rm_f DOCS_DIR + "/#{filename}"
+      FileUtils.rm_f PREV_DIR + "/#{id}"
     end
   end
 
