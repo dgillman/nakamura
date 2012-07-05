@@ -56,7 +56,7 @@ public class DynamicGlobalConfigurationServlet extends SlingAllMethodsServlet {
 
   public static final String DFT_CALLBACK = "define";
 
-  @Reference
+  @Reference(target="(service.pid=org.sakaiproject.nakamura.dynamicconfig.file.JavascriptFileBackedDynamicConfigurationServiceImpl)")
   protected DynamicConfigurationService configurationService;
 
   protected void streamConfigurationCacheKeyJS (final String callback, final Writer writer) throws Exception {
