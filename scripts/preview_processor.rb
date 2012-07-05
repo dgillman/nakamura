@@ -337,7 +337,8 @@ def main()
           # Skip documents with a page count of 0, just to be sure.
           next if Dir[id + '_*'].size == 0
 
-          Dir.mkdir PREV_DIR + "/#{id}" unless File.directory? PREV_DIR + "/#{id}"
+          FileUtils.rm_f PREV_DIR + "/#{id}"
+          Dir.mkdir PREV_DIR + "/#{id}"
 
           # Moving these previews to another directory: "PREVS_DIR/filename/index.jpg".
           Dir[id + '_*'].each_with_index do |preview, index|
@@ -364,6 +365,7 @@ def main()
             content = resize_and_write_file filename_p, filename_thumb, 180, 225
             post_file_to_server id, content, :small, index + 1
           end
+          FileUtils.rm_f PREV_DIR + "/#{id}"
         end
 
         # Pass on the page_count
@@ -381,7 +383,6 @@ def main()
       # No matter what we flag the file as processed and delete the temp copied file.
       @s.execute_post @s.url_for("p/#{id}"), {"sakai:needsprocessing" => "false"}
       FileUtils.rm_f DOCS_DIR + "/#{filename}"
-      FileUtils.rm_f PREV_DIR + "/#{id}"
     end
   end
 
