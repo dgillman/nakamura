@@ -87,21 +87,17 @@ public class DynamicGlobalConfigurationServlet extends SlingAllMethodsServlet {
   }
 
   protected void streamConfigurationJS(final String callback, final OutputStream out) throws Exception {
-    final String header = "(function(){\n\tvar config = ";
-    final String footer = ";\n\treturn config;\n});";
 
     try {
       out.write(callback.getBytes());
-      out.write(header.getBytes());
       streamConfigurationJSON(out);
-      out.write(footer.getBytes());
     } catch (IOException e) {
       log.error ("error occurred streaming configuration JS", e);
     }
   }
 
   protected void streamConfigurationJS(final OutputStream out) throws Exception {
-    streamConfigurationJS(DFT_CALLBACK, out);
+    streamConfigurationJS("", out);
   }
 
   protected void streamConfigurationJSON(final OutputStream out) throws Exception {
