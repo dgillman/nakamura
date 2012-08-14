@@ -187,14 +187,14 @@ public class DocMigrator implements FileMigrationService {
         }
       }
     } catch (Exception e) {
-      LOGGER.error(e.getMessage());
-      throw new RuntimeException("Error while migrating " + content.getPath());
+      LOGGER.error(e.getMessage(), e);
+      throw new RuntimeException("Error while migrating " + content.getPath(), e);
     } finally {
       if (adminSession != null) {
         try {
           adminSession.logout();
         } catch (ClientPoolException e) {
-          LOGGER.error(e.getMessage());
+          LOGGER.error(e.getMessage(), e);
         }
       }
     }
