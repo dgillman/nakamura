@@ -219,7 +219,8 @@ public class DocMigrator implements FileMigrationService {
       return contentFromJson(migratedPage);
     } catch (JSONException e) {
       LOGGER.error(e.getLocalizedMessage(), e);
-      throw new RuntimeException("failed to migrate single page: " + e.getLocalizedMessage());
+      throw new RuntimeException("failed to migrate single page: "
+          + e.getLocalizedMessage(), e);
     }
   }
 
