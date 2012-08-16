@@ -361,29 +361,4 @@ public class DocMigratorTest extends Assert {
     assertFalse(docMigrator.requiresMigration(groupHome, null, null));
   }
 
-  @Test
-  public void testRemovesUnwantedWidgetIcon() throws Exception {
-    JSONObject doc = readJSONFromFile("UnwantedWidgetIcon.json");
-    JSONObject migrated = docMigrator.createNewPageStructure(
-        new JSONObject(doc.getString("structure0")), doc);
-    String htmlBlockId = migrated.getJSONObject("id8933623")
-        .getJSONArray("rows")
-        .getJSONObject(0)
-        .getJSONArray("columns")
-        .getJSONObject(0)
-        .getJSONArray("elements")
-        .getJSONObject(0).getString("id");
-    String htmlBlockContent = migrated.getJSONObject("id8933623")
-        .getJSONObject(htmlBlockId)
-        .getJSONObject("htmlblock")
-        .getString("content");
-    assertTrue(htmlBlockContent.indexOf("widget_inline") < 0);
-  }
-
-  @Test
-  public void testHandlesNoRefGracefully() throws Exception {
-    JSONObject groupHome = readJSONFromFile("GroupHomeDocstructure.json");
-    assertFalse(docMigrator.requiresMigration(groupHome, null, null));
-  }
-
 }
