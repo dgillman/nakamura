@@ -1,6 +1,72 @@
 rSmart Nakamura Changelog
 =========================
 
+base-1.3.1-rsmart
+-----------------
+* [maven-release-plugin] prepare release base-1.3.1-rsmart c220869
+* release_pre_process: Moving config files from 1.3.1-rsmart-SNAPSHOT to 1.3.1-rsmart c970e14
+* ACAD-1199 bind to new release version of solr 266d6ea
+* KERN-3122 additional processing for htmlblock regions to prune out unwanted widget elements (cherry picked from commit e425360dbe30523c54e
+* NOJIRA git co sakai/master src/test/java/org/sakaiproject/nakamura/files/migrator/DocMigratorTest.java 52edddc
+* KERN-2949 move JSON for unit test into its own file. (cherry picked from commit fef7c916ed5d8581ed77ea4def17401e846b84e5) 5c8ff4a
+* KERN-2949 add a check for missing _ref property on elements of structure0 (cherry picked from commit e11b523202ec1654369af6802dcaa5d95588d
+* KERN-3122 additional processing for htmlblock regions to prune out unwanted widget elements (cherry picked from commit e425360dbe30523c54e
+* KERN-3128 JSONObject["message"] not found. org.apache.sling.commons.json.JSONException cc7ba78
+* NOJIRA bind to new release of sparse 0131c39
+* KERN-3125 DocMigrator needs better error logging when unexpected things happen during content migration (cherry picked from commit e5516f5
+* NOJIRA bind to new release artifact of nakamura.core / sparse 26fb36c
+* ACAD-1191 make logging more effective for DocMigrator in error conditions b6398dc
+* ACAD-1193 Add a new Wimba widget b13a7d8
+* NOJIRA trim values to nul before checking. Fix log message. be3b321
+* NOJIRA Add the userId to the log message. e9f99ae
+* release_post_process: Moving config files from 1.3.0-rsmart to 1.3.1-rsmart-SNAPSHOT 3ebbdda
+* [maven-release-plugin] prepare for next development iteration 519f7a1
+
+base-1.3.0-rsmart
+-----------------
+* [maven-release-plugin] prepare release base-1.3.0-rsmart aaa7316
+* release_pre_process: Moving config files from 1.3.0-rsmart-SNAPSHOT to 1.3.0-rsmart f5d8a85
+* NOJIRA bind to release version of solr bundle 3d8001d
+* KERN-3002 Add unit test to check offset-and-size logic; delete unused methods 92fa245
+* KERN-3002 Correct offset-and-size logic: Result size should just be value of items param, not the Max(items, items*page) 0510766
+* NOJIRA deliver the Javascript AS IS. No wrappers. 55566fe
+* KERN-2990 The BasicLTIServlet allows for self modification of the basiclti.launch.html (cherry picked from commit 5a40878c626f6e94408dc52fe59cf73871864b89) 7a9d82e
+* KERN-2988 NPE possible when adding configuration through the GUI for the BasicLTI widget. (cherry picked from commit 4768095dbb288a304503804d53331899f386075a) 949db23
+* Squashed commit of the following: b42524e
+* KERN-1136 resolved https://github.com/rSmart/nakamura/pull/31/files; Merge remote-tracking branch 'rsmart/ACAD-1136' into develop 34c7fa9
+* KERN-2982 BasicLTI authoring page refresh/resource link issue (cherry picked from commit 541b53441a2a6ca76d664458e2c76204fc09a839) 0b6b364
+* Always remove the previews/id/ dir before creating it to avoid Errno::ENOENT errors. 0dd8c71
+* ACAD-1132 Solve the ERRNO file not found errors by ensuring that we clean up the previews directory. 1865bd1
+* NOJIRA tweak the way version numbers are replaced in list.xml (cherry picked from commit 56ec8a842d41682a91bcf1d243b7f9f63ef4711f) 35903b5
+* KERN-2759 fix the output of 'width' for fractional column widths (cherry picked from commit 1dda0d3c361324ff350f7351f0bce7211a80ff74) 43c5895
+* KERN-2796 re-apply lost commit from the 1.2 release (cherry picked from commit f626a9116bcd0775ffe9acb8bb4929e18cfaa712) e122344
+* NOJIRA rebind nakamura.core to 1.3.5.1-rsmart release to work around mvn repo hell. 69e7eb4
+* NOJIRA Fix depency to 1.3.0-rsmart-SNAPSHOT. a53bfee
+* NOJIRA Remove duplicate bundle definition. 68482d3
+* ACAD-1073 Pick up editor field in solr schema.xml 63263b4
+* KERN-2948 Return 204 for users who are not in solr but are sparse (admin). d107070
+* KERN-2948 Add a regex property to the exists servlet to prevent malicious userids. 4650b84
+* KERN-2893 return empty array intead of null to avoid NullPointerException (cherry picked from commit f8e2bb8b1de9345610bb58b8f9c7b26d83d877a3) 5f9a737
+* KERN-2893 return empty array intead of null to avoid NullPointerException (cherry picked from commit f8e2bb8b1de9345610bb58b8f9c7b26d83d877a3) c609f62
+* KERN-2870 Update indirect counts when deleting content where sakai:showalways is 'true' (cherry picked from commit bbf87a5fe6e463f840e6e68b97a92931a334bbaf) 8559595
+* Merge pull request #30 from rSmart/merge-1.3.0 fe94df3
+* NOJIRA fixed merge issues from 1.3.0 version numbers - should be SNAPSHOT 8ae64a1
+* Squashed commit of the following: dabebb7
+* Add the SNAPSHOT qualifier to the pom versions. 0a51fa9
+* Merge pull request #29 from croby/ACAD-1077 8e369e6
+* Merge commit 'org.sakaiproject.nakamura-1.3.0' into ACAD-1073 b84daac
+* KERN-2860 Privilege escalation in LiteDefaultContextIdResolver (cherry picked from commit ff2aaf7e37f6eabf3edc31af350dbd0a41b8db4e) 8c9efc5
+* NOJIRA update CHANGELOG for 1.1.4 release b311e14
+* NOJIRA switch to release artifacts for sparse and solr 4e152ef
+* ACAD-1013 added some metadata to ParameterMap.extract... d920a6e
+* ACAD-956 bind to 1.2 uxloader ef850e5
+* NOJIRA repair ability to run automated integration tests 25fcb72
+* NOJIRA bind 1.2.0 nakamura to 1.1.5-SS UX bundle for now a74abd8
+* ACAD-956 trying to resolve solr schema issue where you cannot create a new user 63df7df
+* ACAD-956 Squashed commit of the following: 689f91d
+* Merge pull request #28 from efroese/ACAD-754 8b3ae73
+* release_post_process: Moving config files from 1.1.4-rsmart to 1.1.5-rsmart-SNAPSHOT d53517a
+
 base-1.1.4-rsmart
 -----------------
 * [maven-release-plugin] prepare release base-1.1.4-rsmart 780d475
