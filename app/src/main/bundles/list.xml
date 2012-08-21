@@ -524,7 +524,7 @@ KERN-1187
     <bundle>
       <groupId>org.sakaiproject.nakamura</groupId>
       <artifactId>org.sakaiproject.nakamura.solr</artifactId>
-      <version>1.4.3-rsmart</version>
+      <version>1.4.4-rsmart</version>
     </bundle>
     <bundle>
       <groupId>org.sakaiproject.nakamura</groupId>
