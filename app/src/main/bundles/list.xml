@@ -740,5 +740,10 @@ KERN-1187
       <artifactId>org.sakaiproject.nakamura.content-packaging</artifactId>
       <version>1.3.5-rsmart-SNAPSHOT</version>
     </bundle>
+    <bundle>
+      <groupId>org.sakaiproject.nakamura</groupId>
+      <artifactId>org.sakaiproject.nakamura.forcemigration</artifactId>
+      <version>1.5.0-SNAPSHOT</version>
+    </bundle>
    </startLevel>
 </bundles>

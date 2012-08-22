@@ -116,6 +116,7 @@
         <module>bundles/lom</module>
         <module>bundles/content-packaging</module>
         <module>bundles/postgresqlwrapper</module>
+        <module>bundles/force-migration</module>
         <module>testscripts</module>
         <module>bundles/dynamicconfig</module>
       </modules>
