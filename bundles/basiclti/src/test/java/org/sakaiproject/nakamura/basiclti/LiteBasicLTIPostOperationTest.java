@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.anyString;
@@ -64,6 +65,7 @@ import org.sakaiproject.nakamura.api.lite.accesscontrol.AclModification.Operatio
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Permission;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Permissions;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Security;
+import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.authorizable.Group;
 import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.sakaiproject.nakamura.api.lite.content.Content;
@@ -125,6 +127,8 @@ public class LiteBasicLTIPostOperationTest {
   Session userSession;
   @Mock
   AccessControlManager accessControlManager;
+  @Mock
+  AuthorizableManager authorizableManager;
   @Mock
   Content parent;
   @Mock
@@ -209,6 +213,8 @@ public class LiteBasicLTIPostOperationTest {
     when(repository.loginAdministrative()).thenReturn(adminSession);
     when(adminSession.getContentManager()).thenReturn(adminContentManager);
     when(userSession.getAccessControlManager()).thenReturn(accessControlManager);
+    when(userSession.getAuthorizableManager()).thenReturn(authorizableManager);
+    when(authorizableManager.isAdmin()).thenReturn(false);
     sensitiveData.put(LTI_KEY, "ltiKey");
     sensitiveData.put(LTI_SECRET, "ltiSecret");
     when(userSession.getUserId()).thenReturn(currentUserId);
@@ -371,10 +377,14 @@ public class LiteBasicLTIPostOperationTest {
    * @throws Exception
    */
   @Test(expected = IllegalStateException.class)
-  public void testCreateSensitiveNodeFailedAclModification() throws Exception {
+  public void testCreateSensitiveNodeFailedAclModification() {
     userPrivs = new Permission[] { Permissions.CAN_READ };
-    when(accessControlManager.getPermissions(eq(Security.ZONE_CONTENT), anyString()))
-        .thenReturn(userPrivs);
+    try {
+      when(accessControlManager.getPermissions(eq(Security.ZONE_CONTENT), anyString()))
+          .thenReturn(userPrivs);
+    } catch (StorageClientException e) {
+      fail("StorageClientException thrown: " + e.getMessage());
+    }
 
     liteBasicLTIPostOperation.createSensitiveNode(parent, userSession, sensitiveData);
   }

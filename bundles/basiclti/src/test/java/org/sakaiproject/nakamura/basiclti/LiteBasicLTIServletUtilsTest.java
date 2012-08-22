@@ -19,6 +19,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 import org.sakaiproject.nakamura.api.lite.Session;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Permission;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Permissions;
+import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 
@@ -28,6 +29,7 @@ import java.util.Set;
 public class LiteBasicLTIServletUtilsTest {
   final String property = "someProperty";
   final String adminUserId = User.ADMIN_USER;
+  final String notAdminUserId = "notAdmin";
   final String normalPath = "mvw0Gmalaa/id1987761/id3490751/basiclti";
   final String tmpUxPath = "mvw0Gmalaa/tmp_id1987761/id3490751/basiclti";
 
@@ -35,11 +37,15 @@ public class LiteBasicLTIServletUtilsTest {
   Content node;
   @Mock
   Session session;
+  @Mock
+  AuthorizableManager authorizableManager;
 
   @Before
   public void setUp() throws Exception {
     when(node.hasProperty(property)).thenReturn(true);
     when(session.getUserId()).thenReturn(adminUserId);
+    when(session.getAuthorizableManager()).thenReturn(authorizableManager);
+    when(authorizableManager.isAdmin()).thenReturn(true);
     when(node.getPath()).thenReturn(normalPath);
   }
 
@@ -67,21 +73,19 @@ public class LiteBasicLTIServletUtilsTest {
    * Normal use case where current user *is* admin user.
    */
   @Test
-  public void testIsAdminUser() {
+  public void testIsAdminUser() throws Exception {
     final boolean isAdminUser = LiteBasicLTIServletUtils.isAdminUser(session);
     assertTrue(isAdminUser);
-    verify(session, atLeastOnce()).getUserId();
   }
 
   /**
    * Normal use case where current user is NOT admin user.
    */
   @Test
-  public void testIsNotAdminUser() {
-    when(session.getUserId()).thenReturn("someOtherUserId");
+  public void testIsNotAdminUser() throws Exception {
+    when(authorizableManager.isAdmin()).thenReturn(false);
     final boolean isAdminUser = LiteBasicLTIServletUtils.isAdminUser(session);
     assertFalse(isAdminUser);
-    verify(session, atLeastOnce()).getUserId();
   }
 
   /**
