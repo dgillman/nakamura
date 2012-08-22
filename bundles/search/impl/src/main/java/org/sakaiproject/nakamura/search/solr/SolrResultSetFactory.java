@@ -241,7 +241,7 @@ public class SolrResultSetFactory implements ResultSetFactory {
     if (asAnon) {
       queryOptions.put("readers", User.ANON_USER);
     } else {
-      if (!authorizable.isAdmin()) {
+      if (!(User.class.isAssignableFrom(authorizable.getClass()) && ((User)authorizable).isAdmin())) {
         AuthorizableManager am = session.getAuthorizableManager();
         Set<String> readers = Sets.newHashSet();
         for (Iterator<Group> gi = authorizable.memberOf(am); gi.hasNext();) {
