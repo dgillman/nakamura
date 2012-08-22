@@ -215,7 +215,8 @@ public class DefaultPostProcessor implements LiteAuthorizablePostProcessor {
   /**
    * Principals that dont manage, Admin has permissions everywhere already. 
    */
-  private static final Set<String> NO_MANAGE = ImmutableSet.of(Group.EVERYONE, User.ANON_USER, User.ADMIN_USER);
+  private static final Set<String> NO_MANAGE = ImmutableSet.of(Group.EVERYONE, Group.ADMINISTRATORS_GROUP,
+     User.ANON_USER, User.ADMIN_USER);
 
   private static final String JOINREQUESTS_FOLDER = "/joinrequests";
 

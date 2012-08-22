@@ -310,8 +310,8 @@ public class LiteBasicLTIPostOperation extends AbstractSparsePostOperation {
     } // end admin elevation
     // sanity check to verify user does not have permissions to sensitive node
     boolean invalidPrivileges = false;
-    if (!isAdminUser(userSession)) { // i.e. normal user
-      try {
+    try {
+      if (!isAdminUser(userSession)) { // i.e. normal user
         final AccessControlManager acm = userSession.getAccessControlManager();
         final Permission[] userPrivs = acm.getPermissions(Security.ZONE_CONTENT,
             adminNodePath);
@@ -324,10 +324,10 @@ public class LiteBasicLTIPostOperation extends AbstractSparsePostOperation {
             }
           }
         }
-      } catch (StorageClientException e) {
+      }
+    } catch (StorageClientException e) {
         LOG.debug("The node does not exist or the user does not have permission(?): {}",
             adminNodePath);
-      }
     }
     if (invalidPrivileges) {
       LOG.error("{} has invalid privileges: {}", userSession.getUserId(), adminNodePath);
@@ -362,14 +362,14 @@ public class LiteBasicLTIPostOperation extends AbstractSparsePostOperation {
   }
 
   /**
-   * @param slingRepository
+   * @param repository
    */
   protected void bindRepository(Repository repository) {
     this.repository = repository;
   }
 
   /**
-   * @param slingRepository
+   * @param repository
    */
   protected void unbindRepository(Repository repository) {
     this.repository = null;

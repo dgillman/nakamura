@@ -43,6 +43,7 @@ import org.sakaiproject.nakamura.api.lite.accesscontrol.AclModification;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.AclModification.Operation;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Permissions;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Security;
+import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.authorizable.Group;
 import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.sakaiproject.nakamura.api.lite.content.Content;
@@ -74,10 +75,12 @@ public class ActivityServiceImpl implements ActivityService {
   protected ActivityRouterManager activityRouterManager;
   
   public void createActivity(Session session, Content targetLocation,  String userId, ActivityServiceCallback callback) throws AccessDeniedException, StorageClientException, ServletException, IOException {
+    final String sessionId = session.getUserId();
     if ( userId == null ) {
-      userId = session.getUserId();
+      userId = sessionId;
     }
-    if ( !userId.equals(session.getUserId()) && !User.ADMIN_USER.equals(session.getUserId()) ) {
+    final AuthorizableManager aM = session.getAuthorizableManager();
+    if ( !userId.equals(sessionId) && !aM.isAdmin(sessionId) ) {
       throw new IllegalStateException("Only Administrative sessions may act on behalf of another user for activities");
     }
     ContentManager contentManager = session.getContentManager();

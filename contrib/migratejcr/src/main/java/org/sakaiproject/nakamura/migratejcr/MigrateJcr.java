@@ -98,7 +98,8 @@ public class MigrateJcr {
   /**
    * Principals that don't manage, Admin has permissions everywhere already. 
    */
-  private static final Set<String> NO_MANAGE = ImmutableSet.copyOf(org.sakaiproject.nakamura.api.lite.authorizable.Group.EVERYONE, User.ANON_USER, User.ADMIN_USER);
+  private static final Set<String> NO_MANAGE = ImmutableSet.copyOf(org.sakaiproject.nakamura.api.lite.authorizable.Group.EVERYONE, 
+     org.sakaiproject.nakamura.api.lite.authorizable.Group.ADMINIATRATORS_GROUP, User.ANON_USER, User.ADMIN_USER);
 
   private Logger LOGGER = LoggerFactory.getLogger(MigrateJcr.class);
 

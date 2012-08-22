@@ -21,8 +21,10 @@ import static org.sakaiproject.nakamura.api.basiclti.BasicLTIAppConstants.LTI_KE
 import static org.sakaiproject.nakamura.api.basiclti.BasicLTIAppConstants.LTI_SECRET;
 
 import org.sakaiproject.nakamura.api.lite.Session;
+import org.sakaiproject.nakamura.api.lite.StorageClientException;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Permission;
 import org.sakaiproject.nakamura.api.lite.accesscontrol.Permissions;
+import org.sakaiproject.nakamura.api.lite.authorizable.AuthorizableManager;
 import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.sakaiproject.nakamura.api.lite.content.Content;
 
@@ -84,9 +86,10 @@ public class LiteBasicLTIServletUtils {
    * @param session
    * @return
    */
-  protected static boolean isAdminUser(final Session session) {
+  protected static boolean isAdminUser(final Session session) throws StorageClientException {
     // would be nice to support multiple admin users
-    return User.ADMIN_USER.equals(session.getUserId());
+    final AuthorizableManager aM = session.getAuthorizableManager();
+    return aM.isAdmin();
   }
 
   /**

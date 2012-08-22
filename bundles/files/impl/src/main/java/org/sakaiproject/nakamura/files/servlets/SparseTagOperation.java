@@ -195,10 +195,7 @@ public class SparseTagOperation extends AbstractSparsePostOperation {
                     AclModification.Operation.OP_REPLACE),
                 new AclModification(AclModification.grantKey(Group.EVERYONE),
                     Permissions.CAN_READ.getPermission(),
-                    AclModification.Operation.OP_REPLACE),
-                new AclModification(AclModification
-                    .grantKey(Group.ADMINISTRATORS_GROUP), Permissions.ALL
-                    .getPermission(), AclModification.Operation.OP_REPLACE) });
+                    AclModification.Operation.OP_REPLACE) });
     return tagContent;
   }
 
