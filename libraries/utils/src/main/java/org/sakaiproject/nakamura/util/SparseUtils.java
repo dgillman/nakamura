@@ -47,7 +47,7 @@ public class SparseUtils {
 
   public static boolean isAdmin (final Authorizable authorizable) {
     return (
-            User.class.isAssignableFrom(authorizable.getClass()) &&
+            authorizable instanceof User &&
             ((User)authorizable).isAdmin()
            );
   }
