@@ -65,6 +65,8 @@ public class DocMigrator implements FileMigrationService {
   private final PageMigrator pageMigrator = new PageMigrator(this);
 
   protected void processStructure0(JSONObject subtree, JSONObject originalStructure, JSONObject newStructure) throws JSONException {
+    LOGGER.trace("processStructure0(JSONObject {}, JSONObject {}, JSONObject {})",
+        new Object[] { subtree, originalStructure, newStructure });
     Set<String> widgetsUsed = Sets.newHashSet();
     for (Iterator<String> referenceIterator = subtree.keys(); referenceIterator.hasNext(); ) {
       String reference = referenceIterator.next();
@@ -79,6 +81,8 @@ public class DocMigrator implements FileMigrationService {
   }
 
   protected JSONObject createNewPageStructure(JSONObject structure0, JSONObject originalDoc) throws JSONException {
+    LOGGER.trace("createNewPageStructure(JSONObject {}, JSONObject {})", structure0,
+        originalDoc);
     JSONObject newDoc = new JSONObject(originalDoc.toString());
     processStructure0(structure0, originalDoc, newDoc);
     // the finishing touches
@@ -88,8 +92,13 @@ public class DocMigrator implements FileMigrationService {
 
   @Override
   public boolean fileContentNeedsMigration(Content content) {
+    LOGGER.trace("fileContentNeedsMigration(Content {})", content);
     try {
-      return !(content == null || isNotSakaiDoc(content) || schemaVersionIsCurrent(content) || contentHasUpToDateStructure(content));
+      final boolean needsMigration = !(content == null || isNotSakaiDoc(content)
+          || schemaVersionIsCurrent(content) || contentHasUpToDateStructure(content));
+      LOGGER.trace("fileContentNeedsMigration() --> needsMigration = {} for {}",
+          needsMigration, content);
+      return needsMigration;
     } catch (SakaiDocMigrationException e) {
       LOGGER.error(e.getLocalizedMessage(), e);
       LOGGER.error("Could not determine requiresMigration with content {}", content.getPath());
@@ -100,17 +109,26 @@ public class DocMigrator implements FileMigrationService {
   @Override
   public boolean isPageNode(Content content, ContentManager contentManager)
       throws StorageClientException, AccessDeniedException {
+    LOGGER
+        .debug("isPageNode(Content {}, ContentManager contentManager)", content);
     if ( content != null && content.hasProperty("page")) {
       String parentPath = PathUtils.getParentReference(content.getPath());
       Content parent = contentManager.get(parentPath);
       if ( parent != null ) {
-        return !(isNotSakaiDoc(parent));
+        final boolean isSakaiDoc = !(isNotSakaiDoc(parent));
+        LOGGER.trace("isPageNode() --> isSakaiDoc = {} for {}", isSakaiDoc,
+            content);
+        return isSakaiDoc;
       }
     }
+    LOGGER.trace("isPageNode() --> return false for {}", content);
     return false;
   }
 
   protected boolean requiresMigration(JSONObject subtree, Content originalStructure, ContentManager contentManager) throws JSONException {
+    LOGGER.trace(
+        "requiresMigration(JSONObject {}, Content {}, ContentManager contentManager)",
+        subtree, originalStructure);
     boolean requiresMigration = false;
     for (Iterator<String> keysIterator = subtree.keys(); keysIterator.hasNext(); ) {
       String key = keysIterator.next();
@@ -126,20 +144,32 @@ public class DocMigrator implements FileMigrationService {
         requiresMigration = requiresMigration(structureItem, originalStructure, contentManager);
       }
     }
+    LOGGER.trace("requiresMigration() --> requiresMigration = {} for {}",
+        requiresMigration, originalStructure);
     return requiresMigration;
   }
 
   private boolean isNotSakaiDoc(Content content) {
-    return !content.hasProperty(STRUCTURE_ZERO);
+    LOGGER.trace("isNotSakaiDoc(Content {})", content);
+    final boolean isNotSakaiDoc = !content.hasProperty(STRUCTURE_ZERO);
+    LOGGER.trace("isNotSakaiDoc() --> isNotSakaiDoc = {} for {}", isNotSakaiDoc,
+        content);
+    return isNotSakaiDoc;
   }
 
   private boolean contentHasUpToDateStructure(Content content) throws SakaiDocMigrationException {
+    LOGGER.trace("contentHasUpToDateStructure(Content {})", content);
     Session adminSession = null;
     try {
       adminSession = repository.loginAdministrative();
       JSONObject structure0 = new JSONObject(getStructure0(content));
-      return !requiresMigration(structure0, content, adminSession.getContentManager());
+      final boolean requiresMigration = !requiresMigration(structure0, content,
+          adminSession.getContentManager());
+      LOGGER.trace("contentHasUpToDateStructure() --> requiresMigration = {} for {}",
+          requiresMigration, content);
+      return requiresMigration;
     } catch (Exception e) {
+      LOGGER.error(e.getLocalizedMessage(), e);
       throw new SakaiDocMigrationException("Error determining if content has an up to date structure.", e);
     } finally {
       if (adminSession != null) {
@@ -153,16 +183,26 @@ public class DocMigrator implements FileMigrationService {
   }
 
   private boolean schemaVersionIsCurrent(Content content) {
-    return (content.hasProperty(FilesConstants.SCHEMA_VERSION)
-      && StorageClientUtils.toInt(content.getProperty(FilesConstants.SCHEMA_VERSION)) >= CURRENT_SCHEMA_VERSION);
+    LOGGER.trace("schemaVersionIsCurrent(Content {})", content);
+    final boolean schemaVersionIsCurrent = (content
+        .hasProperty(FilesConstants.SCHEMA_VERSION) && StorageClientUtils.toInt(content
+        .getProperty(FilesConstants.SCHEMA_VERSION)) >= CURRENT_SCHEMA_VERSION);
+    LOGGER.trace("schemaVersionIsCurrent() --> schemaVersionIsCurrent = {} for {}",
+        schemaVersionIsCurrent, content);
+    return schemaVersionIsCurrent;
   }
 
   @Override
   public void migrateFileContent(Content content) {
+    LOGGER.trace("migrateFileContent(Content {})", content);
     if (content == null || !content.hasProperty(STRUCTURE_ZERO)) {
+      LOGGER
+          .debug(
+              "migrateFileContent() --> content == null || !content.hasProperty(STRUCTURE_ZERO) for {}",
+              content);
       return;
     }
-    LOGGER.debug("Starting migration of {}", content.getPath());
+    LOGGER.debug("Starting migration of {} : {}", content.getId(), content.getPath());
     StringWriter stringWriter = new StringWriter();
     ExtendedJSONWriter stringJsonWriter = new ExtendedJSONWriter(stringWriter);
     Session adminSession = null;
@@ -178,7 +218,8 @@ public class DocMigrator implements FileMigrationService {
       JSONObject convertedStructure = (JSONObject) convertArraysToObjects(newPageStructure);
       validateStructure(convertedStructure);
       
-      LOGGER.debug("Generated new page structure. Saving content {}", content.getPath());
+      LOGGER.debug("Generated new page structure. Saving content {} : {}",
+          content.getId(), content.getPath());
       LiteJsonImporter liteJsonImporter = new LiteJsonImporter();
       liteJsonImporter.importContent(adminContentManager, convertedStructure, content.getPath(), true, true, false, true, adminSession.getAccessControlManager(), Boolean.FALSE);
       
@@ -207,6 +248,8 @@ public class DocMigrator implements FileMigrationService {
 
   @Override
   public Content migrateSinglePage(Content documentContent, Content pageContent) {
+    LOGGER.trace("migrateSinglePage(Content {}, Content {})", documentContent,
+        pageContent);
     try {
       JSONObject documentJson = jsonFromContent(documentContent);
       String ref = PathUtils.lastElement(pageContent.getPath());
@@ -229,6 +272,7 @@ public class DocMigrator implements FileMigrationService {
   }
 
   protected Content contentFromJson(JSONObject jsonObject) throws JSONException {
+    LOGGER.trace("contentFromJson(JSONObject {})", jsonObject);
     ImmutableMap.Builder<String, Object> propBuilder = ImmutableMap.builder();
     for (Iterator<String> jsonKeys = jsonObject.keys(); jsonKeys.hasNext();) {
       String key = jsonKeys.next();
@@ -264,10 +308,14 @@ public class DocMigrator implements FileMigrationService {
       }
     }
     propBuilder.put("version", jsonObject.toString());
-    return new Content(jsonObject.getString("_path"), propBuilder.build());
+    final Content content = new Content(jsonObject.getString("_path"),
+        propBuilder.build());
+    LOGGER.trace("contentFromJson() --> content = {} from {}", content, jsonObject);
+    return content;
   }
 
   protected JSONObject jsonFromContent(Content documentContent) throws JSONException {
+    LOGGER.trace("jsonFromContent(Content {})", documentContent);
     StringWriter stringWriter = new StringWriter();
     ExtendedJSONWriter stringJsonWriter = new ExtendedJSONWriter(stringWriter);
     ExtendedJSONWriter.writeContentTreeToWriter(stringJsonWriter, documentContent, false, -1);
@@ -275,6 +323,7 @@ public class DocMigrator implements FileMigrationService {
   }
 
   protected Object convertArraysToObjects(Object json) throws JSONException {
+    LOGGER.trace("convertArraysToObjects(Object {})", json);
     if (json instanceof JSONObject) {
       JSONObject jsonObject = (JSONObject) json;
       for (Iterator<String> keyIterator = jsonObject.keys(); keyIterator.hasNext(); ) {
@@ -294,16 +343,21 @@ public class DocMigrator implements FileMigrationService {
   }
 
   private boolean objectIsArrayOfJSONObject(Object json) throws JSONException {
+    LOGGER.trace("objectIsArrayOfJSONObject(Object json)");
     return json instanceof JSONArray && ((JSONArray) json).length() > 0 &&
       (((JSONArray) json).get(0) instanceof JSONObject || ((JSONArray) json).get(0) instanceof JSONArray);
   }
 
   private String getStructure0(Content content) {
+    LOGGER.trace("getStructure0(Content {})", content);
     Object structure0 = content.getProperty(STRUCTURE_ZERO);
+    LOGGER.trace("getStructure0() --> structure0 = {} for {}", structure0,
+        content);
     return (structure0 != null) ? structure0.toString() : null;
   }
   
   protected JSONObject convertArrayToObject(JSONArray jsonArray) throws JSONException {
+    LOGGER.trace("convertArrayToObject(JSONArray jsonArray)");
     JSONObject arrayObject = new JSONObject();
     for (int i = 0; i < jsonArray.length(); i++) {
       arrayObject.put("__array__" + i + "__", convertArraysToObjects(jsonArray.get(i)));
@@ -312,13 +366,18 @@ public class DocMigrator implements FileMigrationService {
   }
 
   protected void validateStructure(JSONObject newPageStructure) throws JSONException, SakaiDocMigrationException {
+    LOGGER.trace("validateStructure(JSONObject newPageStructure)");
     if (!newPageStructure.has(FilesConstants.SCHEMA_VERSION) || !newPageStructure.has(STRUCTURE_ZERO)) {
+      LOGGER.debug("new page structure FAILED validation : {}", newPageStructure);
       throw new SakaiDocMigrationException();
     }
     LOGGER.debug("new page structure passes validation.");
   }
 
   private void collectResourcesOfType(Content content, String resourceType, List<Content> resources) {
+    LOGGER.trace(
+        "collectResourcesOfType(Content {}, String {}, List<Content> resources)",
+        content, resourceType);
     if (resourceType.equals(content.getProperty(Content.SLING_RESOURCE_TYPE_FIELD))) {
       resources.add(content);
     }
@@ -338,6 +397,9 @@ public class DocMigrator implements FileMigrationService {
    */
   private void accessControlSensitiveNode(final String sensitiveNodePath,
       final Session adminSession) throws StorageClientException, AccessDeniedException {
+    LOGGER.trace(
+        "accessControlSensitiveNode(final String {}, final Session adminSession)",
+        sensitiveNodePath);
     adminSession.getAccessControlManager().setAcl(
         Security.ZONE_CONTENT,
         sensitiveNodePath,

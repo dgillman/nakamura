@@ -40,10 +40,12 @@ public class PageMigrator {
   private final DocMigrator docMigrator;
 
   public PageMigrator(DocMigrator docMigrator) {
+    LOGGER.trace("new PageMigrator(DocMigrator {})", docMigrator);
     this.docMigrator = docMigrator;
   }
 
   protected JSONObject generateEmptyRow(int columnCount) throws JSONException {
+    LOGGER.trace("generateEmptyRow(int {})", columnCount);
     JSONObject row = new JSONObject();
     row.put("id", generateWidgetId());
     JSONArray columns = new JSONArray();
@@ -58,10 +60,12 @@ public class PageMigrator {
   }
 
   protected String generateWidgetId() {
+    LOGGER.trace("generateWidgetId()");
     return "id" + Math.round(Math.random() * 10000000);
   }
 
   protected void ensureRowPresent(JSONObject page) throws JSONException {
+    LOGGER.trace("ensureRowPresent(JSONObject page)");
     JSONArray rows = page.getJSONArray("rows");
     if (rows == null || rows.length() < 1) {
       rows = new JSONArray();
@@ -71,6 +75,10 @@ public class PageMigrator {
   }
 
   protected void generateNewCell(String id, String type, JSONObject page, JSONObject row, int column, JSONObject widgetData) throws JSONException {
+    LOGGER
+        .debug(
+            "generateNewCell(String {}, String {}, JSONObject page, JSONObject row, int {}, JSONObject widgetData)",
+            new Object[] { id, type, column });
     if (!"tooltip".equals(type) && !"joinrequestbuttons".equals(type)) {
       String columnId = id == null ? generateWidgetId() : id;
       JSONObject element = new JSONObject();
@@ -84,6 +92,10 @@ public class PageMigrator {
   }
 
   protected JSONObject addRowToPage(JSONObject row, JSONObject page, int columnsForNextRow, Element htmlElement, int columnIndex) throws JSONException {
+    LOGGER
+        .debug(
+            "addRowToPage(JSONObject row, JSONObject page, int {}, Element htmlElement, int {})",
+            new Object[] { columnsForNextRow, columnIndex });
     if (!isEmpty(htmlElement)) {
       generateNewCell(null, "htmlblock", page, row, columnIndex, generateHtmlBlock(htmlElement.html()));
     }
@@ -109,6 +121,7 @@ public class PageMigrator {
   }
 
   protected JSONObject generateHtmlBlock(String html) throws JSONException {
+    LOGGER.trace("generateHtmlBlock(String {})", html);
     Element htmlElement = Jsoup.parse(html).select("body").first();
     for (Element widgetElement : htmlElement.select(".widget_inline")) {
       widgetElement.remove();
@@ -121,6 +134,7 @@ public class PageMigrator {
   }
 
   boolean isEmpty(Element htmlElement) {
+    LOGGER.trace("isEmpty(Element {})", htmlElement);
     // filter out TinyMCE instances
     htmlElement.select(".mceEditor").remove();
     String htmlContent = htmlElement.text().trim();
@@ -131,10 +145,16 @@ public class PageMigrator {
         containsElement = true;
       }
     }
-    return !(htmlElement.hasText() || containsElement);
+    final boolean isEmpty = !(htmlElement.hasText() || containsElement);
+    LOGGER.trace("isEmpty() --> isEmpty = {}", isEmpty);
+    return isEmpty;
   }
 
   void processPageReference(JSONObject subtree, JSONObject originalStructure, JSONObject newStructure, Set<String> widgetsUsed, String reference) throws JSONException {
+    LOGGER
+        .debug(
+            "processPageReference(JSONObject subtree, JSONObject originalStructure, JSONObject newStructure, Set<String> {}, String {})",
+            new Object[] { widgetsUsed, reference });
     if (reference.startsWith("_")) {
       return;
     }
@@ -151,6 +171,10 @@ public class PageMigrator {
   }
 
   JSONObject migratePage(JSONObject originalStructure, String contentId, Set<String> widgetsUsed, String ref) throws JSONException {
+    LOGGER
+        .debug(
+            "migratePage(JSONObject originalStructure, String {}, Set<String> {}, String {})",
+            new Object[] { contentId, widgetsUsed, ref });
     Document page;
     JSONObject oldFashionedWidget = originalStructure.getJSONObject(ref);
     if (oldFashionedWidget.has("page")) {
@@ -219,6 +243,7 @@ public class PageMigrator {
   }
 
   private boolean hasImageExtension(String imgSrc) {
+    LOGGER.trace("hasImageExtension(String {})", imgSrc);
     boolean hasImageExtension = false;
     for (String extension : imageExtensions) {
       if (imgSrc.endsWith(extension)) {
@@ -226,10 +251,15 @@ public class PageMigrator {
         break;
       }
     }
+    LOGGER.trace("hasImageExtension() --> hasImageExtension = {}", hasImageExtension);
     return hasImageExtension;
   }
 
   void extractWidget(JSONObject originalStructure, String contentId, Set<String> widgetsUsed, String ref, JSONObject currentPage, JSONObject currentRow, int leftSideColumn, Element widgetElement) throws JSONException {
+    LOGGER
+        .debug(
+            "extractWidget(JSONObject originalStructure, String {}, Set<String> {}, String {}, JSONObject currentPage, JSONObject currentRow, int {}, Element {})",
+            new Object[] { contentId, widgetsUsed, ref, leftSideColumn, widgetElement });
     final String[] widgetIdParts = widgetElement.attr("id").split("_");
     if (widgetIdParts != null && widgetIdParts.length > 1) {
       final String widgetType = widgetIdParts[1];
@@ -256,6 +286,10 @@ public class PageMigrator {
   }
 
   void migrateDiscussionWidget(String contentId, String ref, JSONObject currentPage, String widgetId) throws JSONException {
+    LOGGER
+        .debug(
+            "migrateDiscussionWidget(String {}, String {}, JSONObject currentPage, String {})",
+            new Object[] { contentId, ref, widgetId });
     final String newMessageStorePath = contentId + "/" + ref + "/" + widgetId
         + "/discussion/message";
     final String newAbsoluteMessageStorePath = "/p/" + newMessageStorePath;
@@ -284,9 +318,12 @@ public class PageMigrator {
   }
 
   protected JSONObject getJSONObjectOrNull(JSONObject jsonObject, String key) throws JSONException {
+    LOGGER.trace("getJSONObjectOrNull(JSONObject jsonObject, String {})", key);
     if (jsonObject.has(key)) {
+      LOGGER.trace("getJSONObjectOrNull() --> jsonObject.has({}) = {}", key, true);
       return jsonObject.getJSONObject(key);
     } else {
+      LOGGER.trace("getJSONObjectOrNull() --> jsonObject.has({}) = {}", key, false);
       return null;
     }
   }
