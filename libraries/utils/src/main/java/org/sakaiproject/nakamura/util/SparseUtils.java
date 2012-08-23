@@ -18,6 +18,8 @@
 package org.sakaiproject.nakamura.util;
 
 import org.sakaiproject.nakamura.api.lite.Session;
+import org.sakaiproject.nakamura.api.lite.authorizable.Authorizable;
+import org.sakaiproject.nakamura.api.lite.authorizable.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,13 @@ public class SparseUtils {
         LOGGER.warn("Error logging out of session, but swallowing exception.", e);
       }
     }
+  }
+
+  public static boolean isAdmin (final Authorizable authorizable) {
+    return (
+            User.class.isAssignableFrom(authorizable.getClass()) &&
+            ((User)authorizable).isAdmin()
+           );
   }
   
 }

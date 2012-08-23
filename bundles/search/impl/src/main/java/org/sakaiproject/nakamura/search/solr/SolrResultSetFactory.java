@@ -54,6 +54,7 @@ import org.sakaiproject.nakamura.api.search.solr.SolrSearchParameters;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchResultSet;
 import org.sakaiproject.nakamura.api.search.solr.SolrSearchUtil;
 import org.sakaiproject.nakamura.api.solr.SolrServerService;
+import org.sakaiproject.nakamura.util.SparseUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -241,7 +242,7 @@ public class SolrResultSetFactory implements ResultSetFactory {
     if (asAnon) {
       queryOptions.put("readers", User.ANON_USER);
     } else {
-      if (!(User.class.isAssignableFrom(authorizable.getClass()) && ((User)authorizable).isAdmin())) {
+      if (!SparseUtils.isAdmin(authorizable)) {
         AuthorizableManager am = session.getAuthorizableManager();
         Set<String> readers = Sets.newHashSet();
         for (Iterator<Group> gi = authorizable.memberOf(am); gi.hasNext();) {

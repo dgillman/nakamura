@@ -87,7 +87,6 @@ public class LiteBasicLTIServletUtils {
    * @return
    */
   protected static boolean isAdminUser(final Session session) throws StorageClientException {
-    // would be nice to support multiple admin users
     final AuthorizableManager aM = session.getAuthorizableManager();
     return aM.isAdmin();
   }
