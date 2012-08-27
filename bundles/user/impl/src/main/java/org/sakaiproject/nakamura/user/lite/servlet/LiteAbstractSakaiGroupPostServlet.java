@@ -127,7 +127,7 @@ public abstract class LiteAbstractSakaiGroupPostServlet extends
         for (String member : membersToDelete) {
           String memberId = getAuthIdFromParameter(member);
           group.removeMember(memberId);
-          if(!User.ADMIN_USER.equals(session.getUserId()) && !User.ANON_USER.equals(session.getUserId())
+          if(!authorizableManager.isAdmin(session.getUserId()) && !User.ANON_USER.equals(session.getUserId())
               && Joinable.yes.equals(groupJoin)
               && memberId.equals(session.getUserId())) {
             adminSession = getSession();
@@ -159,7 +159,7 @@ public abstract class LiteAbstractSakaiGroupPostServlet extends
               this.authorizableCountChanger.notify(CONTENT_ITEMS_PROP, memberAuthorizable.getId());
             }
 
-            if(!User.ADMIN_USER.equals(session.getUserId()) && !UserConstants.ANON_USERID.equals(session.getUserId())
+            if(!authorizableManager.isAdmin(session.getUserId()) && !UserConstants.ANON_USERID.equals(session.getUserId())
                 && Joinable.yes.equals(groupJoin)
                 && memberAuthorizable.getId().equals(session.getUserId())
                 && !hasWriteAccess(memberAuthorizable, authorizable, session)){
