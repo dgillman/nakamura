@@ -1,7 +1,41 @@
 @create_user_config_path = "/system/console/configMgr/org.sakaiproject.nakamura.user.lite.servlet.LiteCreateSakaiUserServlet"
 
+Given /^A group named "([^"]*)" exists$/ do |groupName|
+  group = @um.create_group (groupName + "-" + @m)
+end
+
 When /^I add member "([^"]*)" to Group "([^"]*)"$/ do |username, groupName|
   @s.execute_post(@s.url_for("/system/userManager/group/#{groupName}-#{@m}.update.html"), {":member" => "#{username}-#{@m}"})
+end
+
+Then /^Verify "([^"]*)" can add member "([^"]*)" to Group "([^"]*)"$/ do |adminuser, username, groupName|
+  olduser = @s.get_user()
+  user = User.new(adminuser + @m)
+  @s.switch_user(user)
+
+  res = @s.execute_post(@s.url_for("/system/userManager/group/#{groupName}-#{@m}.update.html"), {":member" => "#{username}-#{@m}"})
+
+  if (res.code.to_i != 200)
+    @log.error ("response code: " + res.code.to_s)
+    @log.error (res.body)
+    @log.error ("#{adminuser} could not add #{username} to #{groupName}")
+  end
+  @s.switch_user(olduser)
+end
+
+Then /^Verify "([^"]*)" cannot add member "([^"]*)" to Group "([^"]*)"$/ do |adminuser, username, groupName|
+  olduser = @s.get_user()
+  user = User.new(adminuser + @m)
+  @s.switch_user(user)
+
+  res = @s.execute_post(@s.url_for("/system/userManager/group/#{groupName}-#{@m}.update.html"), {":member" => "#{username}-#{@m}"})
+
+  if (res.code.to_i != 403)
+    @log.error ("response code: " + res.code.to_s)
+    @log.error (res.body)
+    @log.error ("#{adminuser} should not be able to add #{username} to #{groupName}")
+  end
+  @s.switch_user(olduser)
 end
 
 Given /^the Group "([^"]*)" is a Collection$/ do |groupName|
