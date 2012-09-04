@@ -743,7 +743,7 @@ KERN-1187
     <bundle>
       <groupId>org.sakaiproject.nakamura</groupId>
       <artifactId>org.sakaiproject.nakamura.forcemigration</artifactId>
-      <version>1.5.0-SNAPSHOT</version>
+      <version>1.3.5-rsmart-SNAPSHOT</version>
     </bundle>
    </startLevel>
 </bundles>
