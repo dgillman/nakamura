@@ -29,7 +29,6 @@ import org.apache.sling.commons.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.sakaiproject.nakamura.api.files.FilesConstants;
-import org.sakaiproject.nakamura.api.lite.ClientPoolException;
 import org.sakaiproject.nakamura.api.lite.Repository;
 import org.sakaiproject.nakamura.api.lite.Session;
 import org.sakaiproject.nakamura.api.lite.StorageClientException;
@@ -378,6 +377,43 @@ public class DocMigratorTest extends Assert {
         .getJSONObject("htmlblock")
         .getString("content");
     assertTrue(htmlBlockContent.indexOf("widget_inline") < 0);
+  }
+
+  @Test
+  public void migrate_page_ending_in_html() throws Exception {
+    final String DOC_PATH = "/p/12345test";
+    repository = new BaseMemoryRepository().getRepository();
+    docMigrator.repository = repository;
+    Session session = repository.loginAdministrative();
+    ContentManager contentManager = session.getContentManager();
+    AccessControlManager accessControlManager = session.getAccessControlManager();
+    JSONObject doc = readJSONFromFile("DocWithAdditionalPageHtmlFinal.json");
+    LiteJsonImporter jsonImporter = new LiteJsonImporter();
+    jsonImporter.importContent(contentManager, doc, DOC_PATH, true, true, false, true,
+        accessControlManager, true);
+    Content docContent = contentManager.get(DOC_PATH);
+    assertTrue(docMigrator.fileContentNeedsMigration(docContent));
+    docMigrator.migrateFileContent(docContent);
+    docContent = contentManager.get(DOC_PATH);
+
+    JSONObject jsonRep = docMigrator.jsonFromContent(docContent);
+    LOGGER.info(jsonRep.toString(2));
+/*
+    JSONObject pageData = jsonRep.getJSONObject("id2545619");
+
+    //before bug fix "__array__7__", the last HTML element, does not get processed and this throws a JSONException
+    JSONObject lastHtml = pageData.getJSONObject("rows").getJSONObject("__array__0__")
+       .getJSONObject("columns").getJSONObject("__array__0__").getJSONObject("elements")
+       .getJSONObject("__array__7__");
+
+    String lastHtmlId = lastHtml.getString("id");
+
+    JSONObject htmlWidget = pageData.getJSONObject(lastHtmlId);
+    String htmlContent = htmlWidget.getJSONObject("htmlblock").getString("content");
+
+    assertTrue(htmlContent.contains("Tempo"));
+    assertEquals("bogus", jsonRep.toString(2));
+*/
   }
 
 }

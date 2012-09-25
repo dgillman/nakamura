@@ -201,10 +201,12 @@ public class PageMigrator {
     Elements topLevelElements = page.select("body").first().children();
     boolean rowHasLeftColumn = false;
     boolean finishedElement = false;
+    boolean writesRemain = false;
     for (Element topLevelElement : topLevelElements) {
       if (topLevelElement.select(".widget_inline").size() > 0) {
         addRowToPage(currentRow, currentPage, 0, currentHtmlBlock.select("body").first().select("div").first(), 0);
         currentHtmlBlock = Jsoup.parse(EMPTY_DIV);
+        writesRemain = false;
         int numColumns = 1;
         int leftSideColumn = topLevelElement.select(".widget_inline.block_image_left").size() > 0 ? 1 : 0;
         if (leftSideColumn > 0) {
@@ -221,6 +223,8 @@ public class PageMigrator {
           if(elementParts.length > 1 && ("xxxx").equals(elementParts[1]) && !"".equals(elementParts[0])) {
             currentHtmlBlock.select("div").first().appendChild(topLevelElement);
             addRowToPage(currentRow, currentPage, 1, currentHtmlBlock.select("body").first(), rowHasLeftColumn ? 1 : 0);
+            currentHtmlBlock = Jsoup.parse(EMPTY_DIV);
+            writesRemain = false;
             finishedElement = true;
           }
           extractWidget(originalStructure, contentId, widgetsUsed, ref, currentPage, currentRow, leftSideColumn, widgetElement);
@@ -228,16 +232,22 @@ public class PageMigrator {
 
         if (!topLevelElement.hasClass("widget_inline")) {
           currentHtmlBlock.select("div").first().appendChild(topLevelElement);
+          writesRemain = true;
         }
 
       } else {
         currentHtmlBlock.select("div").first().appendChild(topLevelElement);
+        writesRemain = true;
       }
     }
     if (!finishedElement) {
       addRowToPage(currentRow, currentPage, 1, currentHtmlBlock.select("body").first().select("div").first(), rowHasLeftColumn ? 1 : 0);
     }
     ensureRowPresent(currentPage);
+
+    if (writesRemain) {
+      LOGGER.error("INCOMPLETE MIGRATION for content id: {}, ref: {}", new Object[] {contentId, ref});
+    }
 
     return currentPage;
   }
